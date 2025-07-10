@@ -34,6 +34,14 @@ jobs:
       - name: Build frontend Docker image
         run: |
           docker build -t ghcr.io/${{ steps.repo.outputs.repo }}/frontend:${{ steps.vars.outputs.sha }} ./apps/frontend
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: Push backend Docker image
+        run: |
+          docker push ghcr.io/${{ steps.repo.outputs.repo }}/backend:${{ steps.vars.outputs.sha }}
+      - name: Push frontend Docker image
+        run: |
+          docker push ghcr.io/${{ steps.repo.outputs.repo }}/frontend:${{ steps.vars.outputs.sha }}
       - name: Trivy scan backend
         uses: aquasecurity/trivy-action@master
         with:
