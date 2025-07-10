@@ -1,8 +1,8 @@
 node_modules
-npm-debug.log
+npm - debug.log
 dist
-.env
+    .env
 __pycache__
-*.pyc
-*.pyo
-*.pyd
+    *.pyc
+    *.pyo
+    *.pyd
