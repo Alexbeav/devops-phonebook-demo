@@ -55,8 +55,14 @@ app.delete('/api/contacts/:id', async (req, res) => {
     res.status(204).end();
 });
 
+
 app.get('/api/hello', (req, res) => {
     res.json({ message: 'Hello from backend!' });
+});
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok' });
 });
 
 const port = process.env.PORT || 5000;

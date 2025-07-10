@@ -1,0 +1,4 @@
+charts/
+tmp/
+*.tgz
+*.lock
