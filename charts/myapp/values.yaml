@@ -1,3 +1,6 @@
+monitoring:
+  enabled: false
+  release: prometheus
 backend:
   image: ghcr.io/alexbeav/backend:latest
   replicaCount: 1

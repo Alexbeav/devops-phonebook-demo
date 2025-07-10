@@ -27,3 +27,10 @@ This project demonstrates a modern DevOps workflow:
 3. Argo CD syncs Helm chart to cluster
 4. Monitor with Prometheus & Grafana
 5. Security scans run in CI
+
+## Monitoring
+
+If you have Prometheus Operator installed, you can enable ServiceMonitor creation by setting:
+```sh
+helm install myapp . --set monitoring.enabled=true
+```

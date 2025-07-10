@@ -1,9 +1,11 @@
+{{- if .Values.monitoring.enabled }}
+---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: myapp-backend
   labels:
-    release: prometheus
+    release: {{ quote .Values.monitoring.release | default "prometheus" }}
 spec:
   selector:
     matchLabels:
@@ -18,7 +20,7 @@ kind: ServiceMonitor
 metadata:
   name: myapp-frontend
   labels:
-    release: prometheus
+    release: {{ quote .Values.monitoring.release | default "prometheus" }}
 spec:
   selector:
     matchLabels:
@@ -27,3 +29,4 @@ spec:
     - port: http
       path: /metrics
       interval: 15s
+{{- end }}
