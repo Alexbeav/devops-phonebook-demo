@@ -1,0 +1,14 @@
+environment: prod
+replicaCount:
+  frontend: 3
+  backend: 3
+imageTag:
+  frontend: stable
+  backend: stable
+monitoring:
+  enabled: true
+postgresql:
+  enabled: true
+  primary:
+    persistence:
+      size: 32Gi

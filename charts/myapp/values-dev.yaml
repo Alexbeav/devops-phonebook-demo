@@ -1,0 +1,11 @@
+environment: dev
+replicaCount:
+  frontend: 1
+  backend: 1
+imageTag:
+  frontend: latest
+  backend: latest
+monitoring:
+  enabled: false
+postgresql:
+  enabled: true

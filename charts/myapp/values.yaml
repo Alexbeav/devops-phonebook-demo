@@ -27,3 +27,24 @@ frontend:
     limits:
       cpu: 100m
       memory: 128Mi
+# Database (PostgreSQL) configuration
+postgresql:
+  enabled: true
+  auth:
+    username: myappuser
+    password: myapppassword
+    database: myappdb
+  primary:
+    persistence:
+      enabled: true
+      size: 8Gi
+      storageClass: ""
+
+# Environment toggles (dev/prod)
+environment: dev # or prod
+replicaCount:
+  frontend: 1
+  backend: 1
+imageTag:
+  frontend: latest
+  backend: latest

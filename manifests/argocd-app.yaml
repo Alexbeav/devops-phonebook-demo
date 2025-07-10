@@ -1,0 +1,39 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: myapp-project
+  namespace: argocd
+spec:
+  description: MyApp Project
+  sourceRepos:
+    - 'https://github.com/<your-username>/<your-repo>'
+  destinations:
+    - namespace: myapp
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: myapp
+  namespace: argocd
+spec:
+  project: myapp-project
+  source:
+    repoURL: 'https://github.com/<your-username>/<your-repo>'
+    targetRevision: HEAD
+    path: charts/myapp
+    helm:
+      valueFiles:
+        - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: myapp
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

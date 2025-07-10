@@ -1,7 +1,7 @@
-# Backend Dockerfile (Flask)
-FROM python:3.10-slim
+# Backend Dockerfile (Node.js/Express)
+FROM node:20-alpine
 WORKDIR /app
-COPY requirements.txt .
-RUN pip install -r requirements.txt
+COPY package.json package-lock.json* ./
+RUN npm install --production
 COPY . .
-CMD ["python", "app.py"]
+CMD npm run migrate && npm start
