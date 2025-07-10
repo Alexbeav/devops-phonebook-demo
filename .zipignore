@@ -1,0 +1,49 @@
+# Ignore node_modules and build artifacts
+node_modules/
+**/node_modules/
+**/node_modules/**
+apps/frontend/dist/
+apps/backend/__pycache__/
+apps/backend/.venv/
+
+# Ignore Python cache and virtualenvs
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+.venv/
+venv/
+
+# Ignore Docker build cache
+**/.dockerignore
+**/Dockerfile*
+
+# Ignore local environment and IDE files
+.env
+.env.*
+*.env
+*.local
+*.log
+*.swp
+*.swo
+*.DS_Store
+.vscode/
+.idea/
+
+# Ignore test and coverage output
+coverage/
+*.coverage
+*.egg-info/
+
+# Ignore Helm chart build output
+charts/**/charts/
+charts/**/tmp/
+
+# Ignore package lock files (optional, if you want reproducible zips)
+apps/frontend/package-lock.json
+apps/frontend/pnpm-lock.yaml
+apps/frontend/yarn.lock
+
+# Ignore miscellaneous
+*.zip
+*.tar.gz

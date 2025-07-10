@@ -27,3 +27,5 @@ coverage/
 
 # Helm
 *.tgz
+
+ci-cd-k8s-pipeline.zip
