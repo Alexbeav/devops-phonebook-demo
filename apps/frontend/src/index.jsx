@@ -54,7 +54,7 @@ function App() {
 
     return (
         <div style={{ maxWidth: 500, margin: "2rem auto", fontFamily: "sans-serif" }}>
-            <h2>Phonebook Contacts</h2>
+            <h2>Phonebook Contacts (updated)</h2>
             {error && <div style={{ color: "red" }}>{error}</div>}
             {loading ? (
                 <div>Loading...</div>

@@ -57,7 +57,7 @@ app.delete('/api/contacts/:id', async (req, res) => {
 
 
 app.get('/api/hello', (req, res) => {
-    res.json({ message: 'Hello from backend!' });
+    res.json({ message: 'Hello from backend! (updated)' });
 });
 
 // Health check endpoint
