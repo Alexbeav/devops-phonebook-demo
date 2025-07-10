@@ -1,0 +1,29 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: myapp-backend
+  labels:
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: myapp-backend
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: myapp-frontend
+  labels:
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: myapp-frontend
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s

@@ -1,0 +1,12 @@
+backend:
+  image: backend:latest
+  replicaCount: 1
+  service:
+    type: ClusterIP
+    port: 5000
+frontend:
+  image: frontend:latest
+  replicaCount: 1
+  service:
+    type: ClusterIP
+    port: 80

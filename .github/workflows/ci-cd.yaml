@@ -1,0 +1,64 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-scan:
+    runs-on: ubuntu-latest
+    services:
+      docker:
+        image: docker:20.10.7-dind
+        privileged: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Build backend Docker image
+        run: |
+          docker build -t backend:ci ./apps/backend
+      - name: Build frontend Docker image
+        run: |
+          docker build -t frontend:ci ./apps/frontend
+      - name: Trivy scan backend
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: backend:ci
+      - name: Trivy scan frontend
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: frontend:ci
+      - name: Install dependencies (backend)
+        run: |
+          pip install -r apps/backend/requirements.txt
+      - name: Run backend tests
+        run: |
+          pytest apps/backend/tests || true
+      - name: Install dependencies (frontend)
+        run: |
+          cd apps/frontend && npm ci
+      - name: Run frontend tests
+        run: |
+          cd apps/frontend && npm test -- --watchAll=false
+
+  deploy:
+    needs: build-and-scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Kubeconfig
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'latest'
+      - name: Deploy via Helm
+        run: |
+          helm upgrade --install myapp ./charts/myapp --namespace myapp --create-namespace

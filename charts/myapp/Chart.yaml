@@ -1,0 +1,4 @@
+apiVersion: v2
+name: myapp
+version: 0.1.0
+description: A Helm chart for Flask + React app
