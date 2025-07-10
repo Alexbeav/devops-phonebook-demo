@@ -16,19 +16,19 @@ const pool = new Pool({
 });
 
 // CRUD Endpoints
-app.get('/contacts', async (req, res) => {
+app.get('/api/contacts', async (req, res) => {
     const { rows } = await pool.query('SELECT * FROM contacts ORDER BY id');
     res.json(rows);
 });
 
-app.get('/contacts/:id', async (req, res) => {
+app.get('/api/contacts/:id', async (req, res) => {
     const { id } = req.params;
     const { rows } = await pool.query('SELECT * FROM contacts WHERE id = $1', [id]);
     if (rows.length === 0) return res.status(404).json({ error: 'Not found' });
     res.json(rows[0]);
 });
 
-app.post('/contacts', async (req, res) => {
+app.post('/api/contacts', async (req, res) => {
     const { name, phone, email } = req.body;
     const { rows } = await pool.query(
         'INSERT INTO contacts (name, phone, email) VALUES ($1, $2, $3) RETURNING *',
@@ -37,7 +37,7 @@ app.post('/contacts', async (req, res) => {
     res.status(201).json(rows[0]);
 });
 
-app.put('/contacts/:id', async (req, res) => {
+app.put('/api/contacts/:id', async (req, res) => {
     const { id } = req.params;
     const { name, phone, email } = req.body;
     const { rowCount, rows } = await pool.query(
@@ -48,7 +48,7 @@ app.put('/contacts/:id', async (req, res) => {
     res.json(rows[0]);
 });
 
-app.delete('/contacts/:id', async (req, res) => {
+app.delete('/api/contacts/:id', async (req, res) => {
     const { id } = req.params;
     const { rowCount } = await pool.query('DELETE FROM contacts WHERE id = $1', [id]);
     if (rowCount === 0) return res.status(404).json({ error: 'Not found' });
