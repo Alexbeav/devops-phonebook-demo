@@ -30,7 +30,7 @@ export POSTGRES_PASSWORD=secretpassword
 export POSTGRES_USER=phonebook
 export POSTGRES_DB=phonebook
 
-docker run --rm -p 5432:5432 \
+docker run --rm -d -p 5432:5432 \
   -e POSTGRES_PASSWORD=$POSTGRES_PASSWORD \
   -e POSTGRES_USER=$POSTGRES_USER \
   -e POSTGRES_DB=$POSTGRES_DB \
