@@ -38,7 +38,7 @@ postgresql:
     persistence:
       enabled: true
       size: 8Gi
-      storageClass: ""
+      storageClass: ''
 
 # Environment toggles (dev/prod)
 environment: dev # or prod
