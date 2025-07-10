@@ -2,7 +2,7 @@ monitoring:
   enabled: false
   release: prometheus
 backend:
-  image: ghcr.io/alexbeav/backend:latest
+  image: ghcr.io/alexbeav/devops-ci-cd-k8s-pipeline-demo/backend:latest
   replicaCount: 1
   service:
     type: ClusterIP
@@ -15,7 +15,28 @@ backend:
       cpu: 250m
       memory: 256Mi
 frontend:
-  image: ghcr.io/alexbeav/frontend:latest
+  image: ghcr.io/alexbeav/devops-ci-cd-k8s-pipeline-demo/frontend:latest
+  replicaCount: 1
+  service:
+monitoring:
+  enabled: false
+backend:
+  image: ghcr.io/alexbeav/devops-ci-cd-k8s-pipeline-demo/backend
+  tag: e55c832
+  replicaCount: 1
+  service:
+    type: ClusterIP
+    port: 5000
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+frontend:
+  image: ghcr.io/alexbeav/devops-ci-cd-k8s-pipeline-demo/frontend
+  tag: e55c832
   replicaCount: 1
   service:
     type: LoadBalancer
@@ -45,6 +66,3 @@ environment: dev # or prod
 replicaCount:
   frontend: 1
   backend: 1
-imageTag:
-  frontend: latest
-  backend: latest

@@ -2,9 +2,12 @@ environment: dev
 replicaCount:
   frontend: 1
   backend: 1
-imageTag:
-  frontend: latest
-  backend: latest
+backend:
+  image: ghcr.io/alexbeav/devops-ci-cd-k8s-pipeline-demo/backend
+  tag: e55c832
+frontend:
+  image: ghcr.io/alexbeav/devops-ci-cd-k8s-pipeline-demo/frontend
+  tag: e55c832
 monitoring:
   enabled: false
 postgresql:

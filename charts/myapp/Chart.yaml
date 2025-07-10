@@ -2,3 +2,8 @@ apiVersion: v2
 name: myapp
 version: 0.1.0
 description: A Helm chart for Flask + React app
+dependencies:
+  - name: postgresql
+    version: 16.7.16
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled

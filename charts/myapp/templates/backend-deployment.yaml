@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: {{ .Values.backend.image }}
+          image: {{ .Values.backend.image }}:{{ .Values.backend.tag }}
           ports:
             - containerPort: 5000
           resources:
@@ -24,9 +24,14 @@ spec:
             limits:
               cpu: {{ .Values.backend.resources.limits.cpu }}
               memory: {{ .Values.backend.resources.limits.memory }}
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            initialDelaySeconds: 10
+            periodSeconds: 5
           env:
             - name: DB_HOST
-              value: "{{ include \"myapp.fullname\" . }}-postgresql"
+              value: '{{ include "myapp.fullname" . }}-postgresql'
             - name: DB_USER
               value: "{{ .Values.postgresql.auth.username }}"
             - name: DB_PASSWORD
