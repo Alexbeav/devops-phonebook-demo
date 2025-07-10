@@ -25,20 +25,23 @@ jobs:
       - name: Get short SHA
         id: vars
         run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+      - name: Get lowercase repo
+        id: repo
+        run: echo "repo=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
       - name: Build backend Docker image
         run: |
-          docker build -t ghcr.io/${{ github.repository }}/backend:${{ steps.vars.outputs.sha }} ./apps/backend
+          docker build -t ghcr.io/${{ steps.repo.outputs.repo }}/backend:${{ steps.vars.outputs.sha }} ./apps/backend
       - name: Build frontend Docker image
         run: |
-          docker build -t ghcr.io/${{ github.repository }}/frontend:${{ steps.vars.outputs.sha }} ./apps/frontend
+          docker build -t ghcr.io/${{ steps.repo.outputs.repo }}/frontend:${{ steps.vars.outputs.sha }} ./apps/frontend
       - name: Trivy scan backend
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ghcr.io/${{ github.repository }}/backend:${{ steps.vars.outputs.sha }}
+          image-ref: ghcr.io/${{ steps.repo.outputs.repo }}/backend:${{ steps.vars.outputs.sha }}
       - name: Trivy scan frontend
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ghcr.io/${{ github.repository }}/frontend:${{ steps.vars.outputs.sha }}
+          image-ref: ghcr.io/${{ steps.repo.outputs.repo }}/frontend:${{ steps.vars.outputs.sha }}
       - name: Install dependencies (backend)
         run: |
           pip install -r apps/backend/requirements.txt
