@@ -33,7 +33,7 @@
 ## Future Improvements
 - [ ] Add automated tests for backend and frontend
 - [ ] Add semantic versioning for Docker images
-- [ ] Add Terraform for cloud infrastructure
+- [ ] Add Terraform for cloud infrastructure (AWS or Azure)
 - [ ] Add Argo Rollouts and Loki for advanced delivery/logging
 
 ---
