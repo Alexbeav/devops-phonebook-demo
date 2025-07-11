@@ -4,10 +4,10 @@ replicaCount:
   backend: 1
 backend:
   image: ghcr.io/alexbeav/devops-ci-cd-k8s-pipeline-demo/backend
-  tag: e55c832
+  tag: 2d891de
 frontend:
   image: ghcr.io/alexbeav/devops-ci-cd-k8s-pipeline-demo/frontend
-  tag: e55c832
+  tag: 2d891de
 monitoring:
   enabled: false
 postgresql:
