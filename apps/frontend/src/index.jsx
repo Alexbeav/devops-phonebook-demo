@@ -53,44 +53,48 @@ function App() {
     };
 
     return (
-        <div style={{ maxWidth: 500, margin: "2rem auto", fontFamily: "sans-serif" }}>
-            <h2>Phonebook Contacts</h2>
-            {error && <div style={{ color: "red" }}>{error}</div>}
-            {loading ? (
-                <div>Loading...</div>
-            ) : (
-                <ul>
-                    {contacts.map((c) => (
-                        <li key={c.id} style={{ marginBottom: 8 }}>
-                            <b>{c.name}</b> — {c.phone} {c.email && <>({c.email})</>}
-                            <button style={{ marginLeft: 8 }} onClick={() => handleDelete(c.id)}>
-                                Delete
-                            </button>
-                        </li>
-                    ))}
-                </ul>
-            )}
-            <h3>Add Contact</h3>
-            <form onSubmit={handleAdd} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <input
-                    required
-                    placeholder="Name:"
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                />
-                <input
-                    required
-                    placeholder="Phone:"
-                    value={form.phone}
-                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                />
-                <input
-                    placeholder="Email:"
-                    value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                />
-                <button type="submit">Add</button>
-            </form>
+        <div style={{ maxWidth: 900, margin: "2rem auto", fontFamily: "sans-serif", display: "flex", gap: 32 }}>
+            <div style={{ flex: 1 }}>
+                <h2>Dev - Phonebook Contacts</h2>
+                {error && <div style={{ color: "red" }}>{error}</div>}
+                {loading ? (
+                    <div>Loading...</div>
+                ) : (
+                    <ul>
+                        {contacts.map((c) => (
+                            <li key={c.id} style={{ marginBottom: 8 }}>
+                                <b>{c.name}</b> — {c.phone} {c.email && <>({c.email})</>}
+                                <button style={{ marginLeft: 8 }} onClick={() => handleDelete(c.id)}>
+                                    Delete
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </div>
+            <div style={{ flex: 1 }}>
+                <h3>Add Contact</h3>
+                <form onSubmit={handleAdd} style={{ display: "flex", flexDirection: "column", gap: 8, maxWidth: 300 }}>
+                    <input
+                        required
+                        placeholder="Name:"
+                        value={form.name}
+                        onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    />
+                    <input
+                        required
+                        placeholder="Phone:"
+                        value={form.phone}
+                        onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                    />
+                    <input
+                        placeholder="Email:"
+                        value={form.email}
+                        onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    />
+                    <button type="submit">Add</button>
+                </form>
+            </div>
         </div>
     );
 }
