@@ -1,5 +1,5 @@
-
 name: CI/CD Pipeline
+
 permissions:
   contents: write
 
@@ -7,7 +7,7 @@ on:
   push:
     branches: [ main, dev ]
   pull_request:
-    branches: [ main, dev ]
+    branches: [ main ]
 
 jobs:
   build-and-scan:
@@ -15,69 +15,87 @@ jobs:
     services:
       docker:
         image: docker:20.10.7-dind
+
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Ensure full history for git diff
+          fetch-depth: 0
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+
       - name: Get short SHA
         id: vars
         run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
       - name: Get lowercase repo
         id: repo
         run: echo "repo=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
       - name: Check if backend changed
         id: backend-changed
         run: |
           echo "changed=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q '^apps/backend/' && echo true || echo false)" >> $GITHUB_OUTPUT
+
       - name: Build backend Docker image
         if: steps.backend-changed.outputs.changed == 'true'
         run: |
           docker build -t ghcr.io/${{ steps.repo.outputs.repo }}/backend:${{ steps.vars.outputs.sha }} ./apps/backend
+
       - name: Check if frontend changed
         id: frontend-changed
         run: |
           echo "changed=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q '^apps/frontend/' && echo true || echo false)" >> $GITHUB_OUTPUT
+
       - name: Build frontend Docker image
         if: steps.frontend-changed.outputs.changed == 'true'
         run: |
           docker build -t ghcr.io/${{ steps.repo.outputs.repo }}/frontend:${{ steps.vars.outputs.sha }} ./apps/frontend
+
       - name: Log in to GHCR
         run: echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
       - name: Push backend Docker image
         if: steps.backend-changed.outputs.changed == 'true'
         run: |
           docker push ghcr.io/${{ steps.repo.outputs.repo }}/backend:${{ steps.vars.outputs.sha }}
+
       - name: Push frontend Docker image
         if: steps.frontend-changed.outputs.changed == 'true'
         run: |
           docker push ghcr.io/${{ steps.repo.outputs.repo }}/frontend:${{ steps.vars.outputs.sha }}
+
       - name: Trivy scan backend
         if: steps.backend-changed.outputs.changed == 'true'
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ghcr.io/${{ steps.repo.outputs.repo }}/backend:${{ steps.vars.outputs.sha }}
+
       - name: Trivy scan frontend
         if: steps.frontend-changed.outputs.changed == 'true'
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ghcr.io/${{ steps.repo.outputs.repo }}/frontend:${{ steps.vars.outputs.sha }}
+
       - name: Install dependencies (backend)
         run: |
           pip install -r apps/backend/requirements.txt
+
       - name: Run backend tests
         run: |
           pytest apps/backend/tests || true
+
       - name: Install dependencies (frontend)
         run: |
           cd apps/frontend && npm ci
+
       - name: Run frontend tests
         run: |
           cd apps/frontend && npm test -- --watchAll=false
@@ -86,42 +104,42 @@ jobs:
         run: |
           sudo wget https://github.com/mikefarah/yq/releases/download/v4.40.5/yq_linux_amd64 -O /usr/bin/yq
           sudo chmod +x /usr/bin/yq
+
       - name: Update backend image tag in Helm values
         if: steps.backend-changed.outputs.changed == 'true'
         run: |
           yq e '.backend.tag = "${{ steps.vars.outputs.sha }}"' -i charts/myapp/values-dev.yaml
           yq e '.backend.tag = "${{ steps.vars.outputs.sha }}"' -i charts/myapp/values-prod.yaml
+
       - name: Update frontend image tag in Helm values
         if: steps.frontend-changed.outputs.changed == 'true'
         run: |
           yq e '.frontend.tag = "${{ steps.vars.outputs.sha }}"' -i charts/myapp/values-dev.yaml
           yq e '.frontend.tag = "${{ steps.vars.outputs.sha }}"' -i charts/myapp/values-prod.yaml
+
       - name: Show tag lines (debug)
         run: |
           grep 'tag:' charts/myapp/values-dev.yaml
           grep 'tag:' charts/myapp/values-prod.yaml
-      - name: Create Pull Request for tag update
-        if: steps.backend-changed.outputs.changed == 'true' || steps.frontend-changed.outputs.changed == 'true'
+
+      - name: Auto-commit tag update to dev
+        if: github.ref == 'refs/heads/dev' && (steps.backend-changed.outputs.changed == 'true' || steps.frontend-changed.outputs.changed == 'true')
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add charts/myapp/values-*.yaml
+          git commit -m "CI: Update image tag to ${{ steps.vars.outputs.sha }}" || echo "No changes"
+          git push origin dev
+
+      - name: Create Pull Request for tag update to main
+        if: github.ref == 'refs/heads/main' && (steps.backend-changed.outputs.changed == 'true' || steps.frontend-changed.outputs.changed == 'true')
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GHCR_PAT }}
           commit-message: "CI: Update image tag to ${{ steps.vars.outputs.sha }}"
           title: "CI: Update image tag to ${{ steps.vars.outputs.sha }}"
           body: "Automated PR to update image tag in Helm values files."
-          branch: "ci/tag-update-${{ steps.vars.outputs.sha }}"
+          branch: "ci/tag-update"
           add-paths: |
             charts/myapp/values-dev.yaml
             charts/myapp/values-prod.yaml
-
-  # deploy:
-  #    needs: build-and-scan
-  #    runs-on: ubuntu-latest
-  #    steps:
-  #      - uses: actions/checkout@v4
-  #      - name: Set up Kubeconfig
-  #        uses: azure/setup-kubectl@v4
-  #        with:
-  #          version: 'latest'
-  #      - name: Deploy via Helm
-  #        run: |
-  #          helm upgrade --install myapp ./charts/myapp --namespace myapp --create-namespace
