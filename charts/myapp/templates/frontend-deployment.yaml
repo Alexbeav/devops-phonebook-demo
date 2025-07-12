@@ -13,6 +13,10 @@ spec:
         app: {{ include "myapp.fullname" . }}-frontend
     spec:
       containers:
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: {{ include "myapp.fullname" . }}-nginx-config
         - name: frontend
           image: {{ .Values.frontend.image }}:{{ .Values.frontend.tag }}
           ports:
@@ -36,6 +40,10 @@ spec:
               port: 80
             initialDelaySeconds: 10
             periodSeconds: 10
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: default.conf
 ---
 apiVersion: v1
 kind: Service
