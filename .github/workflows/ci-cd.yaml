@@ -17,6 +17,8 @@ jobs:
         image: docker:20.10.7-dind
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Ensure full history for git diff
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -50,29 +52,20 @@ jobs:
       - name: Log in to GHCR
         run: echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
       - name: Push backend Docker image
+        if: steps.backend-changed.outputs.changed == 'true'
         run: |
           docker push ghcr.io/${{ steps.repo.outputs.repo }}/backend:${{ steps.vars.outputs.sha }}
       - name: Push frontend Docker image
+        if: steps.frontend-changed.outputs.changed == 'true'
         run: |
           docker push ghcr.io/${{ steps.repo.outputs.repo }}/frontend:${{ steps.vars.outputs.sha }}
-      - name: Docker metadata (frontend)
-        id: meta-frontend
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}/frontend
-          tags: |
-            type=sha,format=short
       - name: Trivy scan backend
+        if: steps.backend-changed.outputs.changed == 'true'
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ghcr.io/${{ steps.repo.outputs.repo }}/backend:${{ steps.vars.outputs.sha }}
-      - name: Build frontend Docker image
-        run: |
-          docker build -t ${{ steps.meta-frontend.outputs.tags }} ./apps/frontend
-      - name: Push frontend Docker image
-        run: |
-          docker push ${{ steps.meta-frontend.outputs.tags }}
       - name: Trivy scan frontend
+        if: steps.frontend-changed.outputs.changed == 'true'
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ghcr.io/${{ steps.repo.outputs.repo }}/frontend:${{ steps.vars.outputs.sha }}
