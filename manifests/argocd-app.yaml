@@ -1,10 +1,10 @@
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:
-  name: myapp-project
+  name: phonebook
   namespace: argocd
 spec:
-  description: MyApp Project
+  description: Phonebook Project
   sourceRepos:
     - 'https://github.com/Alexbeav/devops-ci-cd-k8s-pipeline-demo.git'
   destinations:
@@ -21,13 +21,13 @@ spec:
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: myapp
+  name: phonebook-app
   namespace: argocd
 spec:
-  project: myapp-project
+  project: phonebook
   source:
-    repoURL: 'https://github.com/<your-username>/<your-repo>'
-    targetRevision: HEAD
+    repoURL: 'https://github.com/Alexbeav/devops-ci-cd-k8s-pipeline-demo.git'
+    targetRevision: main
     path: charts/myapp
     helm:
       valueFiles:
