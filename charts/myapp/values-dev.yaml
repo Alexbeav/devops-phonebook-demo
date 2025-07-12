@@ -68,4 +68,3 @@ postgresql:
       periodSeconds: 10
       timeoutSeconds: 5
       failureThreshold: 5
-

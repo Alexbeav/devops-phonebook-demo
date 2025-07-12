@@ -1,9 +1,13 @@
 nameOverride: myapp-prod
+environment: prod
+
 ingress:
   host: myapp.example.com
+
 monitoring:
   enabled: true
   release: prometheus
+
 backend:
   image: ghcr.io/alexbeav/devops-ci-cd-k8s-pipeline-demo/backend
   tag: "091f381"
@@ -18,6 +22,7 @@ backend:
     limits:
       cpu: 250m
       memory: 256Mi
+
 frontend:
   image: ghcr.io/alexbeav/devops-ci-cd-k8s-pipeline-demo/frontend
   tag: "091f381"
@@ -32,11 +37,11 @@ frontend:
     limits:
       cpu: 100m
       memory: 128Mi
-# Database (PostgreSQL) configuration
+
 postgresql:
-  fullnameOverride: myapp-postgresql
-  nameOverride: myapp-postgresql
   enabled: true
+  nameOverride: myapp-postgresql
+  fullnameOverride: myapp-postgresql
   auth:
     username: myappuser
     password: myapppassword
@@ -66,21 +71,3 @@ postgresql:
       periodSeconds: 10
       timeoutSeconds: 5
       failureThreshold: 5
-# Environment toggles (dev/prod)
-environment: prod
-replicaCount:
-  frontend: 3
-  backend: 3
-ingress:
-  host: myapp.example.com
-environment: prod
-replicaCount:
-  frontend: 3
-  backend: 3
-monitoring:
-  enabled: true
-postgresql:
-  enabled: true
-  primary:
-    persistence:
-      size: 32Gi
