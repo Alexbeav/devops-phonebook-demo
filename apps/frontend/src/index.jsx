@@ -56,7 +56,7 @@ function App() {
         <div style={{
             minHeight: "100vh",
             background: "#0f0f0f",
-            color: "#3663a2",
+            color: "#0099ff",
             fontFamily: "monospace",
             display: "flex",
             flexDirection: "column",
@@ -64,13 +64,13 @@ function App() {
             justifyContent: "center",
             margin: 0
         }}>
-            <h1 style={{ fontSize: "2rem", marginBottom: "0.5rem", color: "#3663a2" }}>� Dev - Phonebook Contacts</h1>
+            <h1 style={{ fontSize: "2rem", marginBottom: "0.5rem", color: "#0099ff" }}>🔵 Phonebook Contacts</h1>
             <div className="label" style={{ color: "#888", fontSize: "0.9rem", marginBottom: "2rem" }}>
                 Served by Nginx inside Docker & Kubernetes
             </div>
             <div style={{ display: "flex", gap: 48, width: "100%", maxWidth: 900 }}>
                 <div style={{ flex: 1, minWidth: 300 }}>
-                    <h2 style={{ color: "#3663a2", borderBottom: "1px solid #222", paddingBottom: 8 }}>Contacts</h2>
+                    <h2 style={{ color: "#0099ff", borderBottom: "1px solid #222", paddingBottom: 8 }}>Contacts</h2>
                     {error && <div style={{ color: "#ff3366" }}>{error}</div>}
                     {loading ? (
                         <div>Loading...</div>
@@ -79,7 +79,7 @@ function App() {
                             {contacts.map((c) => (
                                 <li key={c.id} style={{ marginBottom: 12, background: "#181818", padding: 12, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                                     <span>
-                                        <b style={{ color: "#3663a2" }}>{c.name}</b> — {c.phone} {c.email && <span style={{ color: "#888" }}>({c.email})</span>}
+                                        <b style={{ color: "#0099ff" }}>{c.name}</b> — {c.phone} {c.email && <span style={{ color: "#888" }}>({c.email})</span>}
                                     </span>
                                     <button style={{ marginLeft: 16, background: "#222", color: "#ff3366", border: "none", borderRadius: 4, padding: "4px 12px", cursor: "pointer" }} onClick={() => handleDelete(c.id)}>
                                         Delete
@@ -90,29 +90,29 @@ function App() {
                     )}
                 </div>
                 <div style={{ flex: 1, minWidth: 300 }}>
-                    <h2 style={{ color: "#3663a2", borderBottom: "1px solid #222", paddingBottom: 8 }}>Add Contact</h2>
+                    <h2 style={{ color: "#0099ff", borderBottom: "1px solid #222", paddingBottom: 8 }}>Add Contact</h2>
                     <form onSubmit={handleAdd} style={{ display: "flex", flexDirection: "column", gap: 12, background: "#181818", padding: 24, borderRadius: 8, maxWidth: 350 }}>
                         <input
                             required
                             placeholder="Name:"
                             value={form.name}
                             onChange={(e) => setForm({ ...form, name: e.target.value })}
-                            style={{ background: "#222", color: "#3663a2", border: "1px solid #333", borderRadius: 4, padding: 8 }}
+                            style={{ background: "#222", color: "#0099ff", border: "1px solid #333", borderRadius: 4, padding: 8 }}
                         />
                         <input
                             required
                             placeholder="Phone:"
                             value={form.phone}
                             onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                            style={{ background: "#222", color: "#3663a2", border: "1px solid #333", borderRadius: 4, padding: 8 }}
+                            style={{ background: "#222", color: "#0099ff", border: "1px solid #333", borderRadius: 4, padding: 8 }}
                         />
                         <input
                             placeholder="Email:"
                             value={form.email}
                             onChange={(e) => setForm({ ...form, email: e.target.value })}
-                            style={{ background: "#222", color: "#3663a2", border: "1px solid #333", borderRadius: 4, padding: 8 }}
+                            style={{ background: "#222", color: "#0099ff", border: "1px solid #333", borderRadius: 4, padding: 8 }}
                         />
-                        <button type="submit" style={{ background: "#3663a2", color: "#0f0f0f", border: "none", borderRadius: 4, padding: "8px 0", fontWeight: "bold", cursor: "pointer" }}>Add</button>
+                        <button type="submit" style={{ background: "#0099ff", color: "#0f0f0f", border: "none", borderRadius: 4, padding: "8px 0", fontWeight: "bold", cursor: "pointer" }}>Add</button>
                     </form>
                 </div>
             </div>
