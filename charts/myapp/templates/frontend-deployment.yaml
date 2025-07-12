@@ -1,16 +1,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "myapp.fullname" . }}-frontend
+  name: myapp-frontend
 spec:
   replicas: {{ .Values.frontend.replicaCount }}
   selector:
     matchLabels:
-      app: {{ include "myapp.fullname" . }}-frontend
+      app: myapp-frontend
   template:
     metadata:
       labels:
-        app: {{ include "myapp.fullname" . }}-frontend
+        app: myapp-frontend
     spec:
       containers:
         - name: frontend
@@ -43,20 +43,16 @@ spec:
       volumes:
         - name: nginx-config
           configMap:
-            name: {{ include "myapp.fullname" . }}-nginx-config
-          volumeMounts:
-            - name: nginx-config
-              mountPath: /etc/nginx/conf.d/default.conf
-              subPath: default.conf
+            name: myapp-nginx-config
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "myapp.fullname" . }}-frontend
+  name: myapp-frontend
 spec:
   type: {{ .Values.frontend.service.type }}
   ports:
     - port: {{ .Values.frontend.service.port }}
       targetPort: 80
   selector:
-    app: {{ include "myapp.fullname" . }}-frontend
+    app: myapp-frontend
