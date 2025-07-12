@@ -74,18 +74,18 @@ function App() {
             <form onSubmit={handleAdd} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <input
                     required
-                    placeholder="Name"
+                    placeholder="Name:"
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
                 />
                 <input
                     required
-                    placeholder="Phone"
+                    placeholder="Phone:"
                     value={form.phone}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
                 />
                 <input
-                    placeholder="Email"
+                    placeholder="Email:"
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
                 />
