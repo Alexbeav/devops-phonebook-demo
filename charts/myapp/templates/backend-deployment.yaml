@@ -12,6 +12,15 @@ spec:
       labels:
         app: {{ include "myapp.fullname" . }}-backend
     spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: postgres:16
+          command: ["sh", "-c", "until pg_isready -h $DB_HOST -U $DB_USER; do sleep 2; done"]
+          env:
+            - name: DB_HOST
+              value: '{{ .Values.postgresql.fullnameOverride }}'
+            - name: DB_USER
+              value: "{{ .Values.postgresql.auth.username }}"
       containers:
         - name: backend
           image: {{ .Values.backend.image }}:{{ .Values.backend.tag }}
@@ -31,7 +40,8 @@ spec:
             periodSeconds: 5
           env:
             - name: DB_HOST
-              value: '{{ include "myapp.fullname" . }}-postgresql'
+              value: "{{ .Release.Name }}-postgresql"
+              ##value: '{{ include "myapp.fullname" . }}-postgresql'
             - name: DB_USER
               value: "{{ .Values.postgresql.auth.username }}"
             - name: DB_PASSWORD

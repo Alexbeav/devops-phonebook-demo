@@ -1,0 +1,47 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: phonebook-dev
+  namespace: argocd
+spec:
+  project: phonebook
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: myapp-dev
+  source:
+    repoURL: https://github.com/Alexbeav/devops-ci-cd-k8s-pipeline-demo.git
+    targetRevision: main
+    path: charts/myapp
+    helm:
+      valueFiles:
+        - values-dev.yaml
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: phonebook-prod
+  namespace: argocd
+spec:
+  project: phonebook
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: myapp-prod
+  source:
+    repoURL: https://github.com/Alexbeav/devops-ci-cd-k8s-pipeline-demo.git
+    targetRevision: main
+    path: charts/myapp
+    helm:
+      valueFiles:
+        - values-prod.yaml
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

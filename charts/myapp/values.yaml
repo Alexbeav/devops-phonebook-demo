@@ -1,3 +1,5 @@
+ingress:
+  host: myapp.example.com
 monitoring:
   enabled: false
   release: prometheus

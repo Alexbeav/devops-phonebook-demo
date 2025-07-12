@@ -1,10 +1,82 @@
+nameOverride: myapp-prod
+postgresql:
+  fullnameOverride: myapp-prod-postgresql
+ingress:
+  host: myapp.example.com
+monitoring:
+  enabled: true
+  release: prometheus
+backend:
+  image: ghcr.io/alexbeav/devops-ci-cd-k8s-pipeline-demo/backend
+  tag: 091f381
+  replicaCount: 3
+  service:
+    type: ClusterIP
+    port: 5000
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+frontend:
+  image: ghcr.io/alexbeav/devops-ci-cd-k8s-pipeline-demo/frontend
+  tag: 091f381
+  replicaCount: 3
+  service:
+    type: LoadBalancer
+    port: 80
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+# Database (PostgreSQL) configuration
+postgresql:
+  enabled: true
+  auth:
+    username: myappuser
+    password: myapppassword
+    database: myappdb
+  primary:
+    persistence:
+      enabled: true
+      size: 32Gi
+      storageClass: ''
+    livenessProbe:
+      exec:
+        command:
+          - /bin/sh
+          - -c
+          - exec pg_isready -U myappuser -d myappdb -h 127.0.0.1
+      initialDelaySeconds: 70
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 5
+    readinessProbe:
+      exec:
+        command:
+          - /bin/sh
+          - -c
+          - exec pg_isready -U myappuser -d myappdb -h 127.0.0.1
+      initialDelaySeconds: 40
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 5
+# Environment toggles (dev/prod)
 environment: prod
 replicaCount:
   frontend: 3
   backend: 3
-imageTag:
-  frontend: stable
-  backend: stable
+ingress:
+  host: myapp.example.com
+environment: prod
+replicaCount:
+  frontend: 3
+  backend: 3
 monitoring:
   enabled: true
 postgresql:

@@ -1,17 +1,17 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: myapp-ingress
+  name: {{ include "myapp.fullname" . }}-ingress
   annotations:
     kubernetes.io/ingress.class: nginx
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
 spec:
   tls:
     - hosts:
-        - myapp.example.com
+        - {{ .Values.ingress.host }}
       secretName: myapp-tls
   rules:
-    - host: myapp.example.com
+    - host: {{ .Values.ingress.host }}
       http:
         paths:
           - path: /
