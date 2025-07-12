@@ -82,17 +82,22 @@ jobs:
         run: |
           cd apps/frontend && npm test -- --watchAll=false
 
-      - name: Update image tag in Helm values
+      - name: Update backend image tag in Helm values
+        if: steps.backend-changed.outputs.changed == 'true'
         run: |
-          sed -i "s/^\s*tag: .*/  tag: ${{ steps.vars.outputs.sha }}/" charts/myapp/values.yaml
-      - name: Update image tag in Helm values-dev.yaml
+          sed -i "/backend:/,/tag:/s/^\s*tag: .*/  tag: ${{ steps.vars.outputs.sha }}/" charts/myapp/values.yaml
+          sed -i "/backend:/,/tag:/s/^\s*tag: .*/  tag: ${{ steps.vars.outputs.sha }}/" charts/myapp/values-dev.yaml
+      - name: Update frontend image tag in Helm values
+        if: steps.frontend-changed.outputs.changed == 'true'
         run: |
-          sed -i "s/^\s*tag: .*/  tag: ${{ steps.vars.outputs.sha }}/" charts/myapp/values-dev.yaml
+          sed -i "/frontend:/,/tag:/s/^\s*tag: .*/  tag: ${{ steps.vars.outputs.sha }}/" charts/myapp/values.yaml
+          sed -i "/frontend:/,/tag:/s/^\s*tag: .*/  tag: ${{ steps.vars.outputs.sha }}/" charts/myapp/values-dev.yaml
       - name: Show tag lines (debug)
         run: |
           grep 'tag:' charts/myapp/values.yaml
           grep 'tag:' charts/myapp/values-dev.yaml
       - name: Commit and push updated values.yaml and values-dev.yaml
+        if: steps.backend-changed.outputs.changed == 'true' || steps.frontend-changed.outputs.changed == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

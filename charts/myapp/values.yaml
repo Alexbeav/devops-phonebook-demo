@@ -4,25 +4,6 @@ monitoring:
   enabled: false
   release: prometheus
 backend:
-  image: ghcr.io/alexbeav/devops-ci-cd-k8s-pipeline-demo/backend:latest
-  replicaCount: 1
-  service:
-    type: ClusterIP
-    port: 5000
-  resources:
-    requests:
-      cpu: 50m
-      memory: 64Mi
-    limits:
-      cpu: 250m
-      memory: 256Mi
-frontend:
-  image: ghcr.io/alexbeav/devops-ci-cd-k8s-pipeline-demo/frontend:latest
-  replicaCount: 1
-  service:
-monitoring:
-  enabled: false
-backend:
   image: ghcr.io/alexbeav/devops-ci-cd-k8s-pipeline-demo/backend
   tag: 2d410b5
   replicaCount: 1
@@ -62,7 +43,6 @@ postgresql:
       enabled: true
       size: 8Gi
       storageClass: ''
-
 # Environment toggles (dev/prod)
 environment: dev # or prod
 replicaCount:
