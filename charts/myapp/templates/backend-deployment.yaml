@@ -49,8 +49,7 @@ spec:
               command:
                 - /bin/sh
                 - -c
-                - >
-                  pg_isready -U {{ .Values.postgresql.auth.username }} -d {{ .Values.postgresql.auth.database }} -h {{ .Values.postgresql.fullnameOverride }} -p 5432
+                - "pg_isready -U {{ .Values.postgresql.auth.username }} -d {{ .Values.postgresql.auth.database }} -h {{ .Values.postgresql.fullnameOverride }} -p 5432"
             initialDelaySeconds: 40
             periodSeconds: 10
             timeoutSeconds: 5
@@ -61,8 +60,7 @@ spec:
               command:
                 - /bin/sh
                 - -c
-                - >
-                  pg_isready -U {{ .Values.postgresql.auth.username }} -d {{ .Values.postgresql.auth.database }} -h {{ .Values.postgresql.fullnameOverride }} -p 5432
+                - "pg_isready -U {{ .Values.postgresql.auth.username }} -d {{ .Values.postgresql.auth.database }} -h {{ .Values.postgresql.fullnameOverride }} -p 5432"
             initialDelaySeconds: 70
             periodSeconds: 10
             timeoutSeconds: 5
