@@ -31,10 +31,20 @@ jobs:
       - name: Get lowercase repo
         id: repo
         run: echo "repo=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+      - name: Check if backend changed
+        id: backend-changed
+        run: |
+          echo "changed=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q '^apps/backend/' && echo true || echo false)" >> $GITHUB_OUTPUT
       - name: Build backend Docker image
+        if: steps.backend-changed.outputs.changed == 'true'
         run: |
           docker build -t ghcr.io/${{ steps.repo.outputs.repo }}/backend:${{ steps.vars.outputs.sha }} ./apps/backend
+      - name: Check if frontend changed
+        id: frontend-changed
+        run: |
+          echo "changed=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q '^apps/frontend/' && echo true || echo false)" >> $GITHUB_OUTPUT
       - name: Build frontend Docker image
+        if: steps.frontend-changed.outputs.changed == 'true'
         run: |
           docker build -t ghcr.io/${{ steps.repo.outputs.repo }}/frontend:${{ steps.vars.outputs.sha }} ./apps/frontend
       - name: Log in to GHCR
