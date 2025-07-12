@@ -53,47 +53,68 @@ function App() {
     };
 
     return (
-        <div style={{ maxWidth: 900, margin: "2rem auto", fontFamily: "sans-serif", display: "flex", gap: 32 }}>
-            <div style={{ flex: 1 }}>
-                <h2>Dev - Phonebook Contacts</h2>
-                {error && <div style={{ color: "red" }}>{error}</div>}
-                {loading ? (
-                    <div>Loading...</div>
-                ) : (
-                    <ul>
-                        {contacts.map((c) => (
-                            <li key={c.id} style={{ marginBottom: 8 }}>
-                                <b>{c.name}</b> — {c.phone} {c.email && <>({c.email})</>}
-                                <button style={{ marginLeft: 8 }} onClick={() => handleDelete(c.id)}>
-                                    Delete
-                                </button>
-                            </li>
-                        ))}
-                    </ul>
-                )}
+        <div style={{
+            minHeight: "100vh",
+            background: "#0f0f0f",
+            color: "#00ff99",
+            fontFamily: "monospace",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            margin: 0
+        }}>
+            <h1 style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>🟢 Dev - Phonebook Contacts</h1>
+            <div className="label" style={{ color: "#888", fontSize: "0.9rem", marginBottom: "2rem" }}>
+                Served by Nginx inside Docker & Kubernetes
             </div>
-            <div style={{ flex: 1 }}>
-                <h3>Add Contact</h3>
-                <form onSubmit={handleAdd} style={{ display: "flex", flexDirection: "column", gap: 8, maxWidth: 300 }}>
-                    <input
-                        required
-                        placeholder="Name:"
-                        value={form.name}
-                        onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    />
-                    <input
-                        required
-                        placeholder="Phone:"
-                        value={form.phone}
-                        onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    />
-                    <input
-                        placeholder="Email:"
-                        value={form.email}
-                        onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    />
-                    <button type="submit">Add</button>
-                </form>
+            <div style={{ display: "flex", gap: 48, width: "100%", maxWidth: 900 }}>
+                <div style={{ flex: 1, minWidth: 300 }}>
+                    <h2 style={{ color: "#00ff99", borderBottom: "1px solid #222", paddingBottom: 8 }}>Contacts</h2>
+                    {error && <div style={{ color: "#ff3366" }}>{error}</div>}
+                    {loading ? (
+                        <div>Loading...</div>
+                    ) : (
+                        <ul style={{ padding: 0, listStyle: "none" }}>
+                            {contacts.map((c) => (
+                                <li key={c.id} style={{ marginBottom: 12, background: "#181818", padding: 12, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                    <span>
+                                        <b style={{ color: "#00ff99" }}>{c.name}</b> — {c.phone} {c.email && <span style={{ color: "#888" }}>({c.email})</span>}
+                                    </span>
+                                    <button style={{ marginLeft: 16, background: "#222", color: "#ff3366", border: "none", borderRadius: 4, padding: "4px 12px", cursor: "pointer" }} onClick={() => handleDelete(c.id)}>
+                                        Delete
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
+                <div style={{ flex: 1, minWidth: 300 }}>
+                    <h2 style={{ color: "#00ff99", borderBottom: "1px solid #222", paddingBottom: 8 }}>Add Contact</h2>
+                    <form onSubmit={handleAdd} style={{ display: "flex", flexDirection: "column", gap: 12, background: "#181818", padding: 24, borderRadius: 8, maxWidth: 350 }}>
+                        <input
+                            required
+                            placeholder="Name:"
+                            value={form.name}
+                            onChange={(e) => setForm({ ...form, name: e.target.value })}
+                            style={{ background: "#222", color: "#00ff99", border: "1px solid #333", borderRadius: 4, padding: 8 }}
+                        />
+                        <input
+                            required
+                            placeholder="Phone:"
+                            value={form.phone}
+                            onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                            style={{ background: "#222", color: "#00ff99", border: "1px solid #333", borderRadius: 4, padding: 8 }}
+                        />
+                        <input
+                            placeholder="Email:"
+                            value={form.email}
+                            onChange={(e) => setForm({ ...form, email: e.target.value })}
+                            style={{ background: "#222", color: "#00ff99", border: "1px solid #333", borderRadius: 4, padding: 8 }}
+                        />
+                        <button type="submit" style={{ background: "#00ff99", color: "#0f0f0f", border: "none", borderRadius: 4, padding: "8px 0", fontWeight: "bold", cursor: "pointer" }}>Add</button>
+                    </form>
+                </div>
             </div>
         </div>
     );
