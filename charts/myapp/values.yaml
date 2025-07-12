@@ -24,7 +24,7 @@ monitoring:
   enabled: false
 backend:
   image: ghcr.io/alexbeav/devops-ci-cd-k8s-pipeline-demo/backend
-  tag: 019e537
+  tag: 3f33716
   replicaCount: 1
   service:
     type: ClusterIP
@@ -38,7 +38,7 @@ backend:
       memory: 256Mi
 frontend:
   image: ghcr.io/alexbeav/devops-ci-cd-k8s-pipeline-demo/frontend
-  tag: 019e537
+  tag: 3f33716
   replicaCount: 1
   service:
     type: LoadBalancer
