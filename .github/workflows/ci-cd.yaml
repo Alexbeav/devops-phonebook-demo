@@ -122,7 +122,7 @@ jobs:
           grep 'tag:' charts/myapp/values-dev.yaml
           grep 'tag:' charts/myapp/values-prod.yaml
 
-      - name: Auto-commit tag update to dev
+- name: Auto-commit tag update to dev
         if: github.ref == 'refs/heads/dev' && (steps.backend-changed.outputs.changed == 'true' || steps.frontend-changed.outputs.changed == 'true')
         run: |
           git config user.name "github-actions"
@@ -143,3 +143,4 @@ jobs:
           add-paths: |
             charts/myapp/values-dev.yaml
             charts/myapp/values-prod.yaml
+
