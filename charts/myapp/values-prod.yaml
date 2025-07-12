@@ -40,8 +40,6 @@ frontend:
 
 postgresql:
   enabled: true
-  nameOverride: myapp-postgresql
-  fullnameOverride: myapp-postgresql
   auth:
     username: myappuser
     password: myapppassword
