@@ -89,18 +89,15 @@ jobs:
       - name: Update backend image tag in Helm values
         if: steps.backend-changed.outputs.changed == 'true'
         run: |
-          yq e '.backend.tag = "${{ steps.vars.outputs.sha }}"' -i charts/myapp/values.yaml
           yq e '.backend.tag = "${{ steps.vars.outputs.sha }}"' -i charts/myapp/values-dev.yaml
           yq e '.backend.tag = "${{ steps.vars.outputs.sha }}"' -i charts/myapp/values-prod.yaml
       - name: Update frontend image tag in Helm values
         if: steps.frontend-changed.outputs.changed == 'true'
         run: |
-          yq e '.frontend.tag = "${{ steps.vars.outputs.sha }}"' -i charts/myapp/values.yaml
           yq e '.frontend.tag = "${{ steps.vars.outputs.sha }}"' -i charts/myapp/values-dev.yaml
           yq e '.frontend.tag = "${{ steps.vars.outputs.sha }}"' -i charts/myapp/values-prod.yaml
       - name: Show tag lines (debug)
         run: |
-          grep 'tag:' charts/myapp/values.yaml
           grep 'tag:' charts/myapp/values-dev.yaml
           grep 'tag:' charts/myapp/values-prod.yaml
       - name: Create Pull Request for tag update
@@ -113,7 +110,6 @@ jobs:
           body: "Automated PR to update image tag in Helm values files."
           branch: "ci/tag-update-${{ steps.vars.outputs.sha }}"
           add-paths: |
-            charts/myapp/values.yaml
             charts/myapp/values-dev.yaml
             charts/myapp/values-prod.yaml
 
