@@ -53,7 +53,7 @@ jobs:
       - name: Build backend Docker image
         if: steps.backend-changed.outputs.changed == 'true'
         run: |
-          docker build -t ghcr.io/${{ steps.repo.outputs.repo }}/backend:${{ steps.vars.outputs.sha }} ./apps/backend
+          docker build -t ghcr.io/${{ steps.repo.outputs.repo }}/backend:${{ steps.backend_sha.outputs.backend_sha }} ./apps/backend
 
       - name: Check if frontend changed
         id: frontend-changed
@@ -63,7 +63,7 @@ jobs:
       - name: Build frontend Docker image
         if: steps.frontend-changed.outputs.changed == 'true'
         run: |
-          docker build -t ghcr.io/${{ steps.repo.outputs.repo }}/frontend:${{ steps.vars.outputs.sha }} ./apps/frontend
+          docker build -t ghcr.io/${{ steps.repo.outputs.repo }}/frontend:${{ steps.frontend_sha.outputs.frontend_sha }} ./apps/frontend
 
       - name: Log in to GHCR
         run: echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
