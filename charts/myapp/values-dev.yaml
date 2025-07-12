@@ -8,7 +8,7 @@ monitoring:
   release: prometheus
 backend:
   image: ghcr.io/alexbeav/devops-ci-cd-k8s-pipeline-demo/backend
-  tag: "2872271"
+  tag: "d90f4ad"
   replicaCount: 1
   service:
     type: ClusterIP

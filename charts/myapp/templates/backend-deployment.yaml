@@ -18,7 +18,7 @@ spec:
           command: ["sh", "-c", "until pg_isready -h \"$DB_HOST\" -U \"$DB_USER\"; do sleep 2; done"]
           env:
             - name: DB_HOST
-              value: '{{ .Values.postgresql.fullnameOverride }}'
+              value: "{{ .Release.Name }}-postgresql"
             - name: DB_USER
               value: "{{ .Values.postgresql.auth.username }}"
             - name: DB_NAME
