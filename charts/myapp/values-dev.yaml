@@ -66,24 +66,4 @@ postgresql:
       periodSeconds: 10
       timeoutSeconds: 5
       failureThreshold: 5
-# Environment toggles (dev/prod)
-environment: dev
-replicaCount:
-  frontend: 1
-  backend: 1
-ingress:
-  host: myapp-dev.example.com
-environment: dev
-replicaCount:
-  frontend: 1
-  backend: 1
-backend:
-  image: ghcr.io/alexbeav/devops-ci-cd-k8s-pipeline-demo/backend
-  tag: "2872271"
-frontend:
-  image: ghcr.io/alexbeav/devops-ci-cd-k8s-pipeline-demo/frontend
-  tag: "2872271"
-monitoring:
-  enabled: false
-postgresql:
-  enabled: true
+
