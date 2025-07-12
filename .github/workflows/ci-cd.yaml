@@ -31,9 +31,15 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Get short SHA
-        id: vars
-        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+      - name: Get backend SHA
+        id: backend_sha
+        if: steps.backend-changed.outputs.changed == 'true'
+        run: echo "backend_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Get frontend SHA
+        id: frontend_sha
+        if: steps.frontend-changed.outputs.changed == 'true'
+        run: echo "frontend_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
       - name: Get lowercase repo
         id: repo
@@ -108,14 +114,14 @@ jobs:
       - name: Update backend image tag in Helm values
         if: steps.backend-changed.outputs.changed == 'true'
         run: |
-          yq e '.backend.tag = "${{ steps.vars.outputs.sha }}"' -i charts/myapp/values-dev.yaml
-          yq e '.backend.tag = "${{ steps.vars.outputs.sha }}"' -i charts/myapp/values-prod.yaml
+          yq e '.backend.tag = "${{ steps.backend_sha.outputs.backend_sha }}"' -i charts/myapp/values-dev.yaml
+          yq e '.backend.tag = "${{ steps.backend_sha.outputs.backend_sha }}"' -i charts/myapp/values-prod.yaml
 
       - name: Update frontend image tag in Helm values
         if: steps.frontend-changed.outputs.changed == 'true'
         run: |
-          yq e '.frontend.tag = "${{ steps.vars.outputs.sha }}"' -i charts/myapp/values-dev.yaml
-          yq e '.frontend.tag = "${{ steps.vars.outputs.sha }}"' -i charts/myapp/values-prod.yaml
+          yq e '.frontend.tag = "${{ steps.frontend_sha.outputs.frontend_sha }}"' -i charts/myapp/values-dev.yaml
+          yq e '.frontend.tag = "${{ steps.frontend_sha.outputs.frontend_sha }}"' -i charts/myapp/values-prod.yaml
 
       - name: Show tag lines (debug)
         run: |
@@ -128,7 +134,7 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@users.noreply.github.com"
           git add charts/myapp/values-*.yaml
-          git commit -m "CI: Update image tag to ${{ steps.vars.outputs.sha }}" || echo "No changes"
+          git commit -m "CI: Update image tags to backend:${{ steps.backend_sha.outputs.backend_sha }} frontend:${{ steps.frontend_sha.outputs.frontend_sha }}" || echo "No changes"
           git push origin dev
 
       - name: Create Pull Request for tag update to main
@@ -136,9 +142,9 @@ jobs:
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GHCR_PAT }}
-          commit-message: "CI: Update image tag to ${{ steps.vars.outputs.sha }}"
-          title: "CI: Update image tag to ${{ steps.vars.outputs.sha }}"
-          body: "Automated PR to update image tag in Helm values files."
+          commit-message: "CI: Update image tags to backend:${{ steps.backend_sha.outputs.backend_sha }} frontend:${{ steps.frontend_sha.outputs.frontend_sha }}"
+          title: "CI: Update image tags to backend:${{ steps.backend_sha.outputs.backend_sha }} frontend:${{ steps.frontend_sha.outputs.frontend_sha }}"
+          body: "Automated PR to update image tags in Helm values files."
           branch: "ci/tag-update"
           add-paths: |
             charts/myapp/values-dev.yaml
