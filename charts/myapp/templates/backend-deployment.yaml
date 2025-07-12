@@ -18,11 +18,11 @@ spec:
           command: ["sh", "-c", "until pg_isready -h \"$DB_HOST\" -U \"$DB_USER\"; do sleep 2; done"]
           env:
             - name: DB_HOST
-              value: "{{ printf \"%s-postgresql\" .Release.Name }}"
+              value: "{{ .Values.nameOverride }}-postgresql"
             - name: DB_USER
-              value: "{{ .Values.postgresql.auth.username }}"
+              value: "myappuser"
             - name: DB_NAME
-              value: "{{ .Values.postgresql.auth.database }}"
+              value: "myappdb"
             - name: DB_PORT
               value: "5432"
       containers:
@@ -39,13 +39,13 @@ spec:
               memory: {{ .Values.backend.resources.limits.memory }}
           env:
             - name: DB_HOST
-              value: "{{ printf \"%s-postgresql\" .Release.Name }}"
+              value: "{{ .Values.nameOverride }}-postgresql"
             - name: DB_USER
-              value: "{{ .Values.postgresql.auth.username }}"
+              value: "myappuser"
             - name: DB_PASSWORD
-              value: "{{ .Values.postgresql.auth.password }}"
+              value: "myapppassword"
             - name: DB_NAME
-              value: "{{ .Values.postgresql.auth.database }}"
+              value: "myappdb"
             - name: DB_PORT
               value: "5432"
           # readinessProbe:
