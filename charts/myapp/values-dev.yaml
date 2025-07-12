@@ -2,7 +2,6 @@ nameOverride: myapp-dev
 # IMPORTANT: When deploying to dev, use Helm release name 'myapp-dev' (or Argo CD app name 'myapp-dev')
 # This ensures all resources (including PostgreSQL service) are named correctly for the dev environment.
 postgresql:
-  fullnameOverride: myapp-dev-postgresql
 ingress:
   host: myapp-dev.example.com
 monitoring:

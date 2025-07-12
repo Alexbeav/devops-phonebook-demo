@@ -1,6 +1,5 @@
 nameOverride: myapp-prod
 postgresql:
-  fullnameOverride: myapp-prod-postgresql
 ingress:
   host: myapp.example.com
 monitoring:
