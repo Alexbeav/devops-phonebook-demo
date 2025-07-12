@@ -1,0 +1,95 @@
+# AppProject (unchanged)
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: phonebook
+  namespace: argocd
+spec:
+  description: Phonebook Project
+  sourceRepos:
+    - 'https://github.com/Alexbeav/devops-ci-cd-k8s-pipeline-demo.git'
+  destinations:
+    - namespace: myapp
+      server: https://kubernetes.default.svc
+    - namespace: myapp-dev
+      server: https://kubernetes.default.svc
+    - namespace: myapp-prod
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+---
+# Default (catch-all) deployment
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: phonebook-app
+  namespace: argocd
+spec:
+  project: phonebook
+  source:
+    repoURL: 'https://github.com/Alexbeav/devops-ci-cd-k8s-pipeline-demo.git'
+    targetRevision: main
+    path: charts/myapp
+    helm:
+      valueFiles:
+        - values.yaml
+  destination:
+    namespace: myapp
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+# Development deployment
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: phonebook-dev-app
+  namespace: argocd
+spec:
+  project: phonebook
+  source:
+    repoURL: 'https://github.com/Alexbeav/devops-ci-cd-k8s-pipeline-demo.git'
+    targetRevision: main
+    path: charts/myapp
+    helm:
+      valueFiles:
+        - values-dev.yaml
+  destination:
+    namespace: myapp-dev
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+# Production deployment
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: phonebook-prod-app
+  namespace: argocd
+spec:
+  project: phonebook
+  source:
+    repoURL: 'https://github.com/Alexbeav/devops-ci-cd-k8s-pipeline-demo.git'
+    targetRevision: main
+    path: charts/myapp
+    helm:
+      valueFiles:
+        - values-prod.yaml
+  destination:
+    namespace: myapp-prod
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
