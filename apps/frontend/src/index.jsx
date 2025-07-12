@@ -42,7 +42,7 @@ function App() {
             .catch(() => setError("Failed to add contact"));
     };
 
-    // Delete contact
+    // Delete contact - triggering a change
     const handleDelete = (id) => {
         fetch(`/api/contacts/${id}`, { method: "DELETE" })
             .then((res) => {
