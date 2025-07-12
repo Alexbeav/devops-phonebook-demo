@@ -8,7 +8,7 @@ monitoring:
   release: prometheus
 backend:
   image: ghcr.io/alexbeav/devops-ci-cd-k8s-pipeline-demo/backend
-  tag: 3f33716
+  tag: 2d410b5
   replicaCount: 1
   service:
     type: ClusterIP
@@ -22,7 +22,7 @@ backend:
       memory: 256Mi
 frontend:
   image: ghcr.io/alexbeav/devops-ci-cd-k8s-pipeline-demo/frontend
-  tag: 3f33716
+  tag: 2d410b5
   replicaCount: 1
   service:
     type: LoadBalancer
@@ -79,10 +79,10 @@ replicaCount:
   backend: 1
 backend:
   image: ghcr.io/alexbeav/devops-ci-cd-k8s-pipeline-demo/backend
-  tag: d90f4ad
+  tag: 2d410b5
 frontend:
   image: ghcr.io/alexbeav/devops-ci-cd-k8s-pipeline-demo/frontend
-  tag: d90f4ad
+  tag: 2d410b5
 monitoring:
   enabled: false
 postgresql:
