@@ -122,14 +122,14 @@ jobs:
           grep 'tag:' charts/myapp/values-dev.yaml
           grep 'tag:' charts/myapp/values-prod.yaml
 
-- name: Auto-commit tag update to dev
-        if: github.ref == 'refs/heads/dev' && (steps.backend-changed.outputs.changed == 'true' || steps.frontend-changed.outputs.changed == 'true')
-        run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@users.noreply.github.com"
-          git add charts/myapp/values-*.yaml
-          git commit -m "CI: Update image tag to ${{ steps.vars.outputs.sha }}" || echo "No changes"
-          git push origin dev
+      - name: Auto-commit tag update to dev
+              if: github.ref == 'refs/heads/dev' && (steps.backend-changed.outputs.changed == 'true' || steps.frontend-changed.outputs.changed == 'true')
+              run: |
+                git config user.name "github-actions"
+                git config user.email "github-actions@users.noreply.github.com"
+                git add charts/myapp/values-*.yaml
+                git commit -m "CI: Update image tag to ${{ steps.vars.outputs.sha }}" || echo "No changes"
+                git push origin dev
 
       - name: Create Pull Request for tag update to main
         if: github.ref == 'refs/heads/main' && (steps.backend-changed.outputs.changed == 'true' || steps.frontend-changed.outputs.changed == 'true')
@@ -143,4 +143,3 @@ jobs:
           add-paths: |
             charts/myapp/values-dev.yaml
             charts/myapp/values-prod.yaml
-
