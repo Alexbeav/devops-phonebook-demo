@@ -104,7 +104,7 @@ jobs:
         if: steps.backend-changed.outputs.changed == 'true' || steps.frontend-changed.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v5
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GHCR_PAT }}
           commit-message: "CI: Update image tag to ${{ steps.vars.outputs.sha }}"
           title: "CI: Update image tag to ${{ steps.vars.outputs.sha }}"
           body: "Automated PR to update image tag in Helm values files."
