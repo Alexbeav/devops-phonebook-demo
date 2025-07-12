@@ -18,7 +18,7 @@ spec:
           command: ["sh", "-c", "until pg_isready -h \"$DB_HOST\" -U \"$DB_USER\"; do sleep 2; done"]
           env:
             - name: DB_HOST
-              value: "{{ .Values.postgresql.fullnameOverride }}"
+              value: "myapp-postgresql"
             - name: DB_USER
               value: "{{ .Values.postgresql.auth.username }}"
             - name: DB_NAME
@@ -39,7 +39,7 @@ spec:
               memory: {{ .Values.backend.resources.limits.memory }}
           env:
             - name: DB_HOST
-              value: "{{ .Values.postgresql.fullnameOverride }}"
+              value: "myapp-postgresql"
             - name: DB_USER
               value: "{{ .Values.postgresql.auth.username }}"
             - name: DB_PASSWORD
@@ -53,7 +53,7 @@ spec:
           #     command:
           #       - /bin/sh
           #       - -c
-          #       - "pg_isready -U {{ .Values.postgresql.auth.username }} -d {{ .Values.postgresql.auth.database }} -h {{ .Values.postgresql.fullnameOverride }} -p 5432"
+          #       - "pg_isready -U {{ .Values.postgresql.auth.username }} -d {{ .Values.postgresql.auth.database }} -h {{ printf \"%s-postgresql\" .Release.Name }} -p 5432"
           #   initialDelaySeconds: 40
           #   periodSeconds: 10
           #   timeoutSeconds: 5
@@ -64,7 +64,7 @@ spec:
           #     command:
           #       - /bin/sh
           #       - -c
-          #       - "pg_isready -U {{ .Values.postgresql.auth.username }} -d {{ .Values.postgresql.auth.database }} -h {{ .Values.postgresql.fullnameOverride }} -p 5432"
+          #       - "pg_isready -U {{ .Values.postgresql.auth.username }} -d {{ .Values.postgresql.auth.database }} -h {{ printf \"%s-postgresql\" .Release.Name }} -p 5432"
           #   initialDelaySeconds: 70
           #   periodSeconds: 10
           #   timeoutSeconds: 5

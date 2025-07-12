@@ -35,6 +35,7 @@ frontend:
       memory: 128Mi
 # Database (PostgreSQL) configuration
 postgresql:
+  fullnameOverride: myapp-postgresql
   enabled: true
   auth:
     username: myappuser
