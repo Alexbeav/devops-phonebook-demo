@@ -2,53 +2,112 @@ name: Update Helm Image Tags
 
 on:
   workflow_dispatch:
+    inputs:
+      force_update:
+        description: 'Force update even if tags are the same'
+        required: false
+        type: boolean
+        default: false
   schedule:
-    - cron: '0 6 * * *'
+    - cron: '0 6 * * *' # Daily at 6 AM UTC
 
 jobs:
   update-tags:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install yq
+      - name: Setup tools
         run: |
           sudo wget https://github.com/mikefarah/yq/releases/download/v4.40.5/yq_linux_amd64 -O /usr/bin/yq
           sudo chmod +x /usr/bin/yq
-
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
+          sudo apt-get update && sudo apt-get install -y jq
 
       - name: Get latest backend tag from GHCR
         id: backend_tag
         run: |
           latest=$(curl -s -H "Accept: application/vnd.github.v3+json" \
-            "https://ghcr.io/v2/alexbeav/devops-ci-cd-k8s-pipeline-demo/backend/tags/list" \
-            | jq -r '.tags | sort | reverse | .[0]')
+            "https://ghcr.io/v2/${{ github.repository }}/backend/tags/list" \
+            | jq -r '.tags // [] | sort | reverse | .[0] // "no-tags-found"')
           echo "tag=$latest" >> $GITHUB_OUTPUT
+          echo "🔍 Latest backend tag: $latest"
 
       - name: Get latest frontend tag from GHCR
         id: frontend_tag
         run: |
           latest=$(curl -s -H "Accept: application/vnd.github.v3+json" \
-            "https://ghcr.io/v2/alexbeav/devops-ci-cd-k8s-pipeline-demo/frontend/tags/list" \
-            | jq -r '.tags | sort | reverse | .[0]')
+            "https://ghcr.io/v2/${{ github.repository }}/frontend/tags/list" \
+            | jq -r '.tags // [] | sort | reverse | .[0] // "no-tags-found"')
           echo "tag=$latest" >> $GITHUB_OUTPUT
+          echo "🔍 Latest frontend tag: $latest"
 
-      - name: Update backend tag in values files
+      - name: Check current tags in values files
+        id: current_tags
         run: |
+          backend_dev=$(yq e '.backend.tag' charts/myapp/values-dev.yaml)
+          frontend_dev=$(yq e '.frontend.tag' charts/myapp/values-dev.yaml)
+          backend_prod=$(yq e '.backend.tag' charts/myapp/values-prod.yaml)
+          frontend_prod=$(yq e '.frontend.tag' charts/myapp/values-prod.yaml)
+          
+          echo "backend_dev=$backend_dev" >> $GITHUB_OUTPUT
+          echo "frontend_dev=$frontend_dev" >> $GITHUB_OUTPUT
+          echo "backend_prod=$backend_prod" >> $GITHUB_OUTPUT
+          echo "frontend_prod=$frontend_prod" >> $GITHUB_OUTPUT
+
+      - name: Update image tags in values files
+        run: |
+          echo "📝 Updating image tags..."
+          
+          # Update dev environment
           yq e '.backend.tag = "${{ steps.backend_tag.outputs.tag }}"' -i charts/myapp/values-dev.yaml
-          yq e '.backend.tag = "${{ steps.backend_tag.outputs.tag }}"' -i charts/myapp/values-prod.yaml
-
-      - name: Update frontend tag in values files
-        run: |
           yq e '.frontend.tag = "${{ steps.frontend_tag.outputs.tag }}"' -i charts/myapp/values-dev.yaml
+          
+          # Update prod environment
+          yq e '.backend.tag = "${{ steps.backend_tag.outputs.tag }}"' -i charts/myapp/values-prod.yaml
           yq e '.frontend.tag = "${{ steps.frontend_tag.outputs.tag }}"' -i charts/myapp/values-prod.yaml
 
       - name: Commit and push changes
         run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
           git add charts/myapp/values-*.yaml
-          git commit -m "Update Helm image tags to backend:${{ steps.backend_tag.outputs.tag }} frontend:${{ steps.frontend_tag.outputs.tag }}" || echo "No changes"
+          
+          # Check if there are actual changes
+          if git diff --staged --quiet && [ "${{ github.event.inputs.force_update }}" != "true" ]; then
+            echo "⚠️ No changes detected - image tags are already up to date"
+            echo "💡 Use 'force_update: true' to commit anyway"
+            exit 0
+          fi
+          
+          git commit -m "🔄 Update Helm image tags to latest GHCR versions
+
+          Updated tags:
+          - Backend: ${{ steps.backend_tag.outputs.tag }}
+          - Frontend: ${{ steps.frontend_tag.outputs.tag }}
+          
+          Previous tags:
+          - Dev Backend: ${{ steps.current_tags.outputs.backend_dev }} → ${{ steps.backend_tag.outputs.tag }}
+          - Dev Frontend: ${{ steps.current_tags.outputs.frontend_dev }} → ${{ steps.frontend_tag.outputs.tag }}
+          - Prod Backend: ${{ steps.current_tags.outputs.backend_prod }} → ${{ steps.backend_tag.outputs.tag }}
+          - Prod Frontend: ${{ steps.current_tags.outputs.frontend_prod }} → ${{ steps.frontend_tag.outputs.tag }}
+          
+          Auto-generated by update-image-tags workflow"
+          
           git push
+          
+          echo "✅ Successfully updated image tags"
+          echo "🚀 ArgoCD will detect and sync the changes automatically"
+
+      - name: Create update summary
+        run: |
+          echo "## 🔄 Image Tag Update Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | Component | Previous | New |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------------|-----------|----------|-----|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Dev** | Backend | \`${{ steps.current_tags.outputs.backend_dev }}\` | \`${{ steps.backend_tag.outputs.tag }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Dev** | Frontend | \`${{ steps.current_tags.outputs.frontend_dev }}\` | \`${{ steps.frontend_tag.outputs.tag }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Prod** | Backend | \`${{ steps.current_tags.outputs.backend_prod }}\` | \`${{ steps.backend_tag.outputs.tag }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Prod** | Frontend | \`${{ steps.current_tags.outputs.frontend_prod }}\` | \`${{ steps.frontend_tag.outputs.tag }}\` |" >> $GITHUB_STEP_SUMMARY

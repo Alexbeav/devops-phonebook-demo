@@ -1,4 +1,4 @@
-name: Rollback Application
+name: GitOps Rollback Application
 
 on:
   workflow_dispatch:
@@ -10,41 +10,108 @@ on:
         options:
           - dev
           - prod
-      revision:
-        description: 'Revision to rollback to (leave empty for previous)'
-        required: false
+      backend_tag:
+        description: 'Backend image tag to rollback to'
+        required: true
+        type: string
+      frontend_tag:
+        description: 'Frontend image tag to rollback to'
+        required: true
         type: string
 
 jobs:
   rollback:
     runs-on: ubuntu-latest
     steps:
-      - name: Install ArgoCD CLI
-        run: |
-          curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
-          sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
-      - name: Rollback Application
+      - name: Setup tools
         run: |
-          argocd login ${{ secrets.ARGOCD_SERVER }} --username ${{ secrets.ARGOCD_USERNAME }} --password ${{ secrets.ARGOCD_PASSWORD }} --insecure
+          sudo wget https://github.com/mikefarah/yq/releases/download/v4.40.5/yq_linux_amd64 -O /usr/bin/yq
+          sudo chmod +x /usr/bin/yq
+          sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Validate image tags exist in GHCR
+        run: |
+          # Validate backend tag exists
+          backend_exists=$(curl -s -H "Accept: application/vnd.github.v3+json" \
+            "https://ghcr.io/v2/${{ github.repository }}/backend/tags/list" \
+            | jq -r --arg tag "${{ github.event.inputs.backend_tag }}" '.tags // [] | contains([$tag])')
           
-          APP_NAME="phonebook-${{ github.event.inputs.environment }}-app"
+          # Validate frontend tag exists  
+          frontend_exists=$(curl -s -H "Accept: application/vnd.github.v3+json" \
+            "https://ghcr.io/v2/${{ github.repository }}/frontend/tags/list" \
+            | jq -r --arg tag "${{ github.event.inputs.frontend_tag }}" '.tags // [] | contains([$tag])')
           
-          if [ -n "${{ github.event.inputs.revision }}" ]; then
-            echo "Rolling back $APP_NAME to revision ${{ github.event.inputs.revision }}"
-            argocd app rollback $APP_NAME ${{ github.event.inputs.revision }}
-          else
-            echo "Rolling back $APP_NAME to previous revision"
-            argocd app rollback $APP_NAME
+          if [ "$backend_exists" != "true" ]; then
+            echo "❌ Backend tag ${{ github.event.inputs.backend_tag }} not found in GHCR"
+            exit 1
           fi
           
-          echo "Syncing application after rollback"
-          argocd app sync $APP_NAME
+          if [ "$frontend_exists" != "true" ]; then
+            echo "❌ Frontend tag ${{ github.event.inputs.frontend_tag }} not found in GHCR"
+            exit 1
+          fi
           
-          echo "Waiting for sync to complete"
-          argocd app wait $APP_NAME --timeout 300
+          echo "✅ Both image tags validated in GHCR"
 
-      - name: Get rollback status
+      - name: Get current tags for rollback confirmation
+        id: current_tags
         run: |
-          APP_NAME="phonebook-${{ github.event.inputs.environment }}-app"
-          argocd app get $APP_NAME
+          current_backend=$(yq e '.backend.tag' charts/myapp/values-${{ github.event.inputs.environment }}.yaml)
+          current_frontend=$(yq e '.frontend.tag' charts/myapp/values-${{ github.event.inputs.environment }}.yaml)
+          echo "current_backend=$current_backend" >> $GITHUB_OUTPUT
+          echo "current_frontend=$current_frontend" >> $GITHUB_OUTPUT
+
+      - name: Rollback image tags in values file
+        run: |
+          echo "🔄 Rolling back ${{ github.event.inputs.environment }} environment..."
+          echo "   Backend: ${{ steps.current_tags.outputs.current_backend }} → ${{ github.event.inputs.backend_tag }}"
+          echo "   Frontend: ${{ steps.current_tags.outputs.current_frontend }} → ${{ github.event.inputs.frontend_tag }}"
+          
+          yq e '.backend.tag = "${{ github.event.inputs.backend_tag }}"' -i charts/myapp/values-${{ github.event.inputs.environment }}.yaml
+          yq e '.frontend.tag = "${{ github.event.inputs.frontend_tag }}"' -i charts/myapp/values-${{ github.event.inputs.environment }}.yaml
+
+      - name: Commit and push rollback
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add charts/myapp/values-${{ github.event.inputs.environment }}.yaml
+          
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "⚠️ No changes detected - tags already match target versions"
+            exit 0
+          fi
+          
+          git commit -m "🔄 Rollback ${{ github.event.inputs.environment }} to backend:${{ github.event.inputs.backend_tag }} frontend:${{ github.event.inputs.frontend_tag }}
+
+          Previous versions:
+          - Backend: ${{ steps.current_tags.outputs.current_backend }}
+          - Frontend: ${{ steps.current_tags.outputs.current_frontend }}
+          
+          Triggered by: ${{ github.actor }}"
+          
+          git push
+          
+          echo "✅ Rollback committed successfully"
+          echo "🚀 ArgoCD will automatically sync the changes within ~3 minutes"
+
+      - name: Create rollback summary
+        run: |
+          echo "## 🔄 Rollback Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Previous | New |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|----------|-----|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Environment** | - | \`${{ github.event.inputs.environment }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Backend** | \`${{ steps.current_tags.outputs.current_backend }}\` | \`${{ github.event.inputs.backend_tag }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Frontend** | \`${{ steps.current_tags.outputs.current_frontend }}\` | \`${{ github.event.inputs.frontend_tag }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🚀 **Next Steps:**" >> $GITHUB_STEP_SUMMARY
+          echo "- ArgoCD will detect the changes and sync automatically" >> $GITHUB_STEP_SUMMARY
+          echo "- Monitor deployment status in ArgoCD UI" >> $GITHUB_STEP_SUMMARY
+          echo "- Verify application functionality after rollback" >> $GITHUB_STEP_SUMMARY

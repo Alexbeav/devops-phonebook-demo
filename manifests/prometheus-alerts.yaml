@@ -1,0 +1,158 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: myapp-alerts
+  namespace: default
+  labels:
+    app: myapp
+    release: prometheus
+spec:
+  groups:
+  - name: myapp.rules
+    rules:
+    - alert: MyAppPodDown
+      expr: up{job="myapp-backend"} == 0
+      for: 2m
+      labels:
+        severity: critical
+        component: backend
+      annotations:
+        summary: "MyApp backend pod is down"
+        description: "Backend pod has been down for more than 2 minutes"
+        runbook_url: "https://github.com/alexbeav/devops-ci-cd-k8s-pipeline-demo/blob/main/docs/runbooks/backend-down.md"
+    
+    - alert: MyAppFrontendDown
+      expr: up{job="myapp-frontend"} == 0
+      for: 2m
+      labels:
+        severity: critical
+        component: frontend
+      annotations:
+        summary: "MyApp frontend pod is down"
+        description: "Frontend pod has been down for more than 2 minutes"
+        runbook_url: "https://github.com/alexbeav/devops-ci-cd-k8s-pipeline-demo/blob/main/docs/runbooks/frontend-down.md"
+    
+    - alert: MyAppHighMemoryUsage
+      expr: |
+        (
+          container_memory_working_set_bytes{pod=~"myapp-.*", container!="POD", container!=""}
+          / 
+          container_spec_memory_limit_bytes{pod=~"myapp-.*", container!="POD", container!=""}
+        ) > 0.8
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High memory usage on MyApp pods"
+        description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has been using more than 80% of its memory limit for more than 5 minutes. Current usage: {{ $value | humanizePercentage }}"
+        runbook_url: "https://github.com/alexbeav/devops-ci-cd-k8s-pipeline-demo/blob/main/docs/runbooks/high-memory.md"
+    
+    - alert: MyAppHighCPUUsage
+      expr: |
+        (
+          rate(container_cpu_usage_seconds_total{pod=~"myapp-.*", container!="POD", container!=""}[5m])
+          /
+          container_spec_cpu_quota{pod=~"myapp-.*", container!="POD", container!=""} * container_spec_cpu_period{pod=~"myapp-.*", container!="POD", container!=""}
+        ) > 0.8
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High CPU usage on MyApp pods"
+        description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has been using more than 80% of its CPU limit for more than 5 minutes. Current usage: {{ $value | humanizePercentage }}"
+        runbook_url: "https://github.com/alexbeav/devops-ci-cd-k8s-pipeline-demo/blob/main/docs/runbooks/high-cpu.md"
+    
+    - alert: MyAppPodRestartingFrequently
+      expr: |
+        rate(kube_pod_container_status_restarts_total{pod=~"myapp-.*"}[15m]) > 0
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "MyApp pod is restarting frequently"
+        description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has restarted {{ $value }} times in the last 15 minutes"
+        runbook_url: "https://github.com/alexbeav/devops-ci-cd-k8s-pipeline-demo/blob/main/docs/runbooks/pod-restarts.md"
+    
+    - alert: MyAppDatabaseConnectionFails
+      expr: |
+        increase(postgresql_up{job="myapp-postgresql"}[5m]) == 0
+      for: 1m
+      labels:
+        severity: critical
+        component: database
+      annotations:
+        summary: "MyApp cannot connect to PostgreSQL database"
+        description: "PostgreSQL database connection has been failing for more than 1 minute"
+        runbook_url: "https://github.com/alexbeav/devops-ci-cd-k8s-pipeline-demo/blob/main/docs/runbooks/database-connection.md"
+---
+# PrometheusRule for dev environment
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: myapp-alerts-dev
+  namespace: myapp-dev
+  labels:
+    app: myapp
+    environment: dev
+    release: prometheus
+spec:
+  groups:
+  - name: myapp-dev.rules
+    rules:
+    - alert: MyAppDevPodDown
+      expr: up{job="myapp-backend", namespace="myapp-dev"} == 0
+      for: 3m
+      labels:
+        severity: warning
+        environment: dev
+        component: backend
+      annotations:
+        summary: "MyApp dev backend pod is down"
+        description: "Backend pod in dev environment has been down for more than 3 minutes"
+    
+    - alert: MyAppDevFrontendDown
+      expr: up{job="myapp-frontend", namespace="myapp-dev"} == 0
+      for: 3m
+      labels:
+        severity: warning
+        environment: dev
+        component: frontend
+      annotations:
+        summary: "MyApp dev frontend pod is down"
+        description: "Frontend pod in dev environment has been down for more than 3 minutes"
+---
+# PrometheusRule for prod environment
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: myapp-alerts-prod
+  namespace: myapp-prod
+  labels:
+    app: myapp
+    environment: prod
+    release: prometheus
+spec:
+  groups:
+  - name: myapp-prod.rules
+    rules:
+    - alert: MyAppProdPodDown
+      expr: up{job="myapp-backend", namespace="myapp-prod"} == 0
+      for: 1m
+      labels:
+        severity: critical
+        environment: prod
+        component: backend
+      annotations:
+        summary: "MyApp prod backend pod is down"
+        description: "Backend pod in prod environment has been down for more than 1 minute"
+    
+    - alert: MyAppProdFrontendDown
+      expr: up{job="myapp-frontend", namespace="myapp-prod"} == 0
+      for: 1m
+      labels:
+        severity: critical
+        environment: prod
+        component: frontend
+      annotations:
+        summary: "MyApp prod frontend pod is down"
+        description: "Frontend pod in prod environment has been down for more than 1 minute"

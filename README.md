@@ -7,9 +7,40 @@ This project demonstrates a modern, production-style DevOps workflow for a full-
 - **Database:** PostgreSQL (Bitnami Helm subchart, persistent)
 - **CI/CD:** GitHub Actions → Trivy scan → GHCR → Argo CD
 - **GitOps Deployment:** Argo CD + Helm
-- **Monitoring:** Prometheus & Grafana
+- **Ingress:** Traefik with TLS via cert-manager
+- **Monitoring:** Prometheus with comprehensive alerting rules
 - **Security Scanning:** Trivy
-- **Ingress:** NGINX + TLS via cert-manager
+- **Rollback:** One-click GitOps rollback via GitHub Actions
+
+## 🚀 Quick Start
+
+**See [QUICKSTART.md](QUICKSTART.md) for detailed setup instructions.**
+
+## ✨ Features Showcase
+
+### 🔄 **GitOps Workflow**
+- ✅ Multi-environment deployments (dev/prod)
+- ✅ ArgoCD auto-sync with self-healing
+- ✅ Automated image tag updates
+- ✅ One-click rollback via GitHub Actions
+
+### 🏗️ **CI/CD Pipeline**
+- ✅ Conditional builds based on changed components
+- ✅ Container security scanning with Trivy
+- ✅ Multi-environment Helm value management
+- ✅ Automated dependency updates
+
+### 🛡️ **Production-Ready Operations**
+- ✅ Traefik ingress controller with TLS
+- ✅ Comprehensive Prometheus alerting
+- ✅ Detailed runbooks for incident response
+- ✅ Resource optimization and scaling
+
+### 📊 **Monitoring & Alerting**
+- ✅ Pod availability monitoring
+- ✅ Resource usage alerts (CPU/Memory)
+- ✅ Database connectivity monitoring
+- ✅ Environment-specific alert thresholds
 
 ---
 
@@ -124,23 +155,68 @@ CREATE TABLE contacts (
 
 ---
 
-## ✅ What This Shows
-- Clean separation of tiers
-- Production-ready CI/CD & GitOps
-- Helm values for config/secrets
-- Monitoring & security best practices
+## 📝 PostgreSQL Schema
+```sql
+CREATE TABLE contacts (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    phone TEXT NOT NULL,
+    email TEXT
+);
+```
 
----
+## 🚨 Alert Rules
 
-## Troubleshooting
-- If pods fail to pull images, check imagePullSecrets or make images public.
-- If frontend shows "Loading...", check Nginx proxy config and backend API connectivity.
-- For DB issues, check pod logs and DB env vars.
+This project includes comprehensive monitoring with Prometheus alert rules:
 
----
+### Critical Alerts
+- **Pod Down**: Application pods unavailable for >2 minutes (prod) or >3 minutes (dev)
+- **Database Connection**: PostgreSQL connectivity issues
 
-## Credits
-- Bitnami Helm charts
-- Argo CD
-- Trivy
-- cert-manager
+### Warning Alerts  
+- **High Memory Usage**: Memory usage >80% for >5 minutes
+- **High CPU Usage**: CPU usage >80% for >5 minutes
+- **Frequent Restarts**: Pods restarting repeatedly
+
+### Runbooks
+Detailed troubleshooting guides available in `docs/runbooks/`:
+- [Backend Pod Down](docs/runbooks/backend-down.md)
+- [Frontend Pod Down](docs/runbooks/frontend-down.md)
+- [High Memory Usage](docs/runbooks/high-memory.md)
+- [High CPU Usage](docs/runbooks/high-cpu.md)
+- [Pod Restarts](docs/runbooks/pod-restarts.md)
+- [Database Connection](docs/runbooks/database-connection.md)
+
+## 🎮 Manual Operations
+
+### GitOps Rollback
+Use GitHub Actions "GitOps Rollback Application" workflow:
+1. Select environment (dev/prod)
+2. Specify backend and frontend image tags
+3. Execute rollback - ArgoCD syncs automatically
+
+### Update Image Tags
+Use GitHub Actions "Update Helm Image Tags" workflow:
+- Automatically fetches latest tags from GHCR
+- Updates both dev and prod environments
+- Runs daily at 6 AM UTC or manually triggered
+
+## ✅ What This Demonstrates
+
+### DevOps Best Practices
+- **GitOps**: All deployments via Git commits
+- **Infrastructure as Code**: Helm charts and K8s manifests
+- **Immutable Infrastructure**: Container-based deployments
+- **Automated Testing**: CI pipeline with security scanning
+
+### Production Readiness
+- **Multi-environment**: Separate dev/prod with different configurations  
+- **Monitoring**: Comprehensive alerting and runbooks
+- **Security**: Container scanning and secret management
+- **Reliability**: Auto-healing, scaling, and rollback capabilities
+
+### Enterprise Features
+- **Observability**: Prometheus metrics and alerts
+- **Incident Response**: Detailed runbooks and escalation procedures
+- **Change Management**: Controlled deployments via GitOps
+- **Compliance**: Audit trails through Git history
