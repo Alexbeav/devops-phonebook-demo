@@ -1,0 +1,54 @@
+name: Update Helm Image Tags
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * *'
+
+jobs:
+  update-tags:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install yq
+        run: |
+          sudo wget https://github.com/mikefarah/yq/releases/download/v4.40.5/yq_linux_amd64 -O /usr/bin/yq
+          sudo chmod +x /usr/bin/yq
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Get latest backend tag from GHCR
+        id: backend_tag
+        run: |
+          latest=$(curl -s -H "Accept: application/vnd.github.v3+json" \
+            "https://ghcr.io/v2/alexbeav/devops-ci-cd-k8s-pipeline-demo/backend/tags/list" \
+            | jq -r '.tags | sort | reverse | .[0]')
+          echo "tag=$latest" >> $GITHUB_OUTPUT
+
+      - name: Get latest frontend tag from GHCR
+        id: frontend_tag
+        run: |
+          latest=$(curl -s -H "Accept: application/vnd.github.v3+json" \
+            "https://ghcr.io/v2/alexbeav/devops-ci-cd-k8s-pipeline-demo/frontend/tags/list" \
+            | jq -r '.tags | sort | reverse | .[0]')
+          echo "tag=$latest" >> $GITHUB_OUTPUT
+
+      - name: Update backend tag in values files
+        run: |
+          yq e '.backend.tag = "${{ steps.backend_tag.outputs.tag }}"' -i charts/myapp/values-dev.yaml
+          yq e '.backend.tag = "${{ steps.backend_tag.outputs.tag }}"' -i charts/myapp/values-prod.yaml
+
+      - name: Update frontend tag in values files
+        run: |
+          yq e '.frontend.tag = "${{ steps.frontend_tag.outputs.tag }}"' -i charts/myapp/values-dev.yaml
+          yq e '.frontend.tag = "${{ steps.frontend_tag.outputs.tag }}"' -i charts/myapp/values-prod.yaml
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add charts/myapp/values-*.yaml
+          git commit -m "Update Helm image tags to backend:${{ steps.backend_tag.outputs.tag }} frontend:${{ steps.frontend_tag.outputs.tag }}" || echo "No changes"
+          git push
