@@ -37,6 +37,7 @@ frontend:
 # Database (PostgreSQL) configuration
 postgresql:
   enabled: true
+  fullnameOverride: myapp-postgresql
   auth:
     username: myappuser
     password: myapppassword

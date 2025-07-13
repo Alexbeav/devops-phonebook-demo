@@ -31,24 +31,26 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Get backend SHA
-        id: backend_sha
-        if: steps.backend-changed.outputs.changed == 'true'
-        run: echo "backend_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-
-      - name: Get frontend SHA
-        id: frontend_sha
-        if: steps.frontend-changed.outputs.changed == 'true'
-        run: echo "frontend_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-
       - name: Get lowercase repo
         id: repo
         run: echo "repo=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
 
+      - name: Get backend SHA
+        id: backend_sha
+        run: echo "backend_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Get frontend SHA
+        id: frontend_sha
+        run: echo "frontend_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
       - name: Check if backend changed
         id: backend-changed
         run: |
-          echo "changed=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q '^apps/backend/' && echo true || echo false)" >> $GITHUB_OUTPUT
+          if [ "${{ github.event.before }}" == "0000000000000000000000000000000000000000" ] || [ -z "${{ github.event.before }}" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q '^apps/backend/' && echo true || echo false)" >> $GITHUB_OUTPUT
+          fi
 
       - name: Build backend Docker image
         if: steps.backend-changed.outputs.changed == 'true'
@@ -58,7 +60,11 @@ jobs:
       - name: Check if frontend changed
         id: frontend-changed
         run: |
-          echo "changed=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q '^apps/frontend/' && echo true || echo false)" >> $GITHUB_OUTPUT
+          if [ "${{ github.event.before }}" == "0000000000000000000000000000000000000000" ] || [ -z "${{ github.event.before }}" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q '^apps/frontend/' && echo true || echo false)" >> $GITHUB_OUTPUT
+          fi
 
       - name: Build frontend Docker image
         if: steps.frontend-changed.outputs.changed == 'true'
@@ -71,24 +77,24 @@ jobs:
       - name: Push backend Docker image
         if: steps.backend-changed.outputs.changed == 'true'
         run: |
-          docker push ghcr.io/${{ steps.repo.outputs.repo }}/backend:${{ steps.vars.outputs.sha }}
+          docker push ghcr.io/${{ steps.repo.outputs.repo }}/backend:${{ steps.backend_sha.outputs.backend_sha }}
 
       - name: Push frontend Docker image
         if: steps.frontend-changed.outputs.changed == 'true'
         run: |
-          docker push ghcr.io/${{ steps.repo.outputs.repo }}/frontend:${{ steps.vars.outputs.sha }}
+          docker push ghcr.io/${{ steps.repo.outputs.repo }}/frontend:${{ steps.frontend_sha.outputs.frontend_sha }}
 
       - name: Trivy scan backend
         if: steps.backend-changed.outputs.changed == 'true'
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ghcr.io/${{ steps.repo.outputs.repo }}/backend:${{ steps.vars.outputs.sha }}
+          image-ref: ghcr.io/${{ steps.repo.outputs.repo }}/backend:${{ steps.backend_sha.outputs.backend_sha }}
 
       - name: Trivy scan frontend
         if: steps.frontend-changed.outputs.changed == 'true'
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ghcr.io/${{ steps.repo.outputs.repo }}/frontend:${{ steps.vars.outputs.sha }}
+          image-ref: ghcr.io/${{ steps.repo.outputs.repo }}/frontend:${{ steps.frontend_sha.outputs.frontend_sha }}
 
       - name: Install dependencies (backend)
         run: |

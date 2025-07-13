@@ -25,7 +25,7 @@ spec:
               done
           env:
             - name: DB_HOST
-              value: "{{ .Release.Name }}-postgresql"
+              value: "myapp-postgresql"
             - name: DB_USER
               value: "myappuser"
             - name: DB_NAME
@@ -46,7 +46,7 @@ spec:
               memory: {{ .Values.backend.resources.limits.memory }}
           env:
             - name: DB_HOST
-              value: "{{ .Release.Name }}-postgresql"
+              value: "myapp-postgresql"
             - name: DB_USER
               value: "myappuser"
             - name: DB_PASSWORD
