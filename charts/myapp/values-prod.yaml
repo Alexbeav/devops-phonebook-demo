@@ -21,7 +21,7 @@ backend:
       memory: 256Mi
 frontend:
   image: ghcr.io/alexbeav/devops-ci-cd-k8s-pipeline-demo/frontend
-  tag: "091f381"
+  tag: "2d15a96"
   replicaCount: 3
   service:
     type: LoadBalancer
