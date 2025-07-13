@@ -1,16 +1,13 @@
 nameOverride: myapp-prod
 environment: prod
-
 ingress:
   host: myapp.example.com
-
 monitoring:
   enabled: true
   release: prometheus
-
 backend:
   image: ghcr.io/alexbeav/devops-ci-cd-k8s-pipeline-demo/backend
-  tag: "091f381"
+  tag: "d64df33"
   replicaCount: 3
   service:
     type: ClusterIP
@@ -22,7 +19,6 @@ backend:
     limits:
       cpu: 250m
       memory: 256Mi
-
 frontend:
   image: ghcr.io/alexbeav/devops-ci-cd-k8s-pipeline-demo/frontend
   tag: "091f381"
@@ -37,7 +33,6 @@ frontend:
     limits:
       cpu: 100m
       memory: 128Mi
-
 postgresql:
   enabled: true
   fullnameOverride: myapp-postgresql
