@@ -2,6 +2,10 @@ nameOverride: myapp-prod
 environment: prod
 ingress:
   host: myapp.example.com
+  useIngressRoute: false  # Set to true to use Traefik IngressRoute instead of standard Ingress
+  tls:
+    enabled: true
+    certResolver: letsencrypt
 monitoring:
   enabled: true
   release: prometheus

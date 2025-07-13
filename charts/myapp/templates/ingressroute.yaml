@@ -1,0 +1,38 @@
+{{- if .Values.ingress.useIngressRoute }}
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ include "myapp.fullname" . }}-ingressroute
+spec:
+  entryPoints:
+    - web
+    - websecure
+  routes:
+    - match: Host(`{{ .Values.ingress.host }}`) && PathPrefix(`/api`)
+      kind: Rule
+      services:
+        - name: myapp-backend
+          port: 5000
+      middlewares:
+        - name: api-stripprefix
+    - match: Host(`{{ .Values.ingress.host }}`)
+      kind: Rule
+      services:
+        - name: myapp-frontend
+          port: 80
+  {{- if .Values.ingress.tls.enabled }}
+  tls:
+    certResolver: {{ .Values.ingress.tls.certResolver | default "letsencrypt" }}
+  {{- end }}
+---
+{{- if .Values.ingress.useIngressRoute }}
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: api-stripprefix
+spec:
+  stripPrefix:
+    prefixes:
+      - /api
+{{- end }}
+{{- end }}

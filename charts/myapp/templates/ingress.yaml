@@ -3,9 +3,11 @@ kind: Ingress
 metadata:
   name: {{ include "myapp.fullname" . }}-ingress
   annotations:
-    kubernetes.io/ingress.class: nginx
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
 spec:
+  ingressClassName: traefik
   tls:
     - hosts:
         - {{ .Values.ingress.host }}
@@ -18,13 +20,13 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: {{ include "myapp.fullname" . }}-frontend
+                name: myapp-frontend
                 port:
                   number: 80
-          - path: /api/
+          - path: /api
             pathType: Prefix
             backend:
               service:
-                name: {{ include "myapp.fullname" . }}-backend
+                name: myapp-backend
                 port:
                   number: 5000

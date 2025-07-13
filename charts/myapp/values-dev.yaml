@@ -3,6 +3,10 @@ nameOverride: myapp-dev
 # This ensures all resources (including PostgreSQL service) are named correctly for the dev environment.
 ingress:
   host: myapp-dev.example.com
+  useIngressRoute: false  # Set to true to use Traefik IngressRoute instead of standard Ingress
+  tls:
+    enabled: true
+    certResolver: letsencrypt
 monitoring:
   enabled: false
   release: prometheus

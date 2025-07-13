@@ -1,0 +1,50 @@
+name: Rollback Application
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to rollback'
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+      revision:
+        description: 'Revision to rollback to (leave empty for previous)'
+        required: false
+        type: string
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install ArgoCD CLI
+        run: |
+          curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
+
+      - name: Rollback Application
+        run: |
+          argocd login ${{ secrets.ARGOCD_SERVER }} --username ${{ secrets.ARGOCD_USERNAME }} --password ${{ secrets.ARGOCD_PASSWORD }} --insecure
+          
+          APP_NAME="phonebook-${{ github.event.inputs.environment }}-app"
+          
+          if [ -n "${{ github.event.inputs.revision }}" ]; then
+            echo "Rolling back $APP_NAME to revision ${{ github.event.inputs.revision }}"
+            argocd app rollback $APP_NAME ${{ github.event.inputs.revision }}
+          else
+            echo "Rolling back $APP_NAME to previous revision"
+            argocd app rollback $APP_NAME
+          fi
+          
+          echo "Syncing application after rollback"
+          argocd app sync $APP_NAME
+          
+          echo "Waiting for sync to complete"
+          argocd app wait $APP_NAME --timeout 300
+
+      - name: Get rollback status
+        run: |
+          APP_NAME="phonebook-${{ github.event.inputs.environment }}-app"
+          argocd app get $APP_NAME
