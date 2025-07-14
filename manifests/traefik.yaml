@@ -44,6 +44,11 @@ spec:
         globalArguments:
           - "--api.insecure=true"
           - "--serversTransport.insecureSkipVerify=true"
+          - "--certificatesresolvers.letsencrypt.acme.email=alexbeav@live.com"
+          - "--certificatesresolvers.letsencrypt.acme.storage=/data/acme.json"
+          - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+          - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+          - "--certificatesresolvers.letsencrypt.acme.caserver=https://acme-v02.api.letsencrypt.org/directory"
   destination:
     server: https://kubernetes.default.svc
     namespace: traefik-system
