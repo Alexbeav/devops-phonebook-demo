@@ -22,7 +22,7 @@ spec:
           port: 80
   {{- if .Values.ingress.tls.enabled }}
   tls:
-    certResolver: {{ .Values.ingress.tls.certResolver | default "letsencrypt" }}
+    secretName: myapp-tls-secret
   {{- end }}
 ---
 {{- if .Values.ingress.useIngressRoute }}
