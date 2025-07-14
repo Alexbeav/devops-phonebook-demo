@@ -2,7 +2,7 @@ nameOverride: myapp-prod
 environment: prod
 ingress:
   host: myapp.example.com
-  useIngressRoute: false  # Set to true to use Traefik IngressRoute instead of standard Ingress
+  useIngressRoute: false # Set to true to use Traefik IngressRoute instead of standard Ingress
   tls:
     enabled: true
     certResolver: letsencrypt
@@ -11,7 +11,7 @@ monitoring:
   release: prometheus
 backend:
   image: ghcr.io/alexbeav/devops-ci-cd-k8s-pipeline-demo/backend
-  tag: "02778a6"
+  tag: "6407eba"
   replicaCount: 3
   service:
     type: ClusterIP
@@ -25,7 +25,7 @@ backend:
       memory: 256Mi
 frontend:
   image: ghcr.io/alexbeav/devops-ci-cd-k8s-pipeline-demo/frontend
-  tag: "02778a6"
+  tag: "6407eba"
   replicaCount: 3
   service:
     type: LoadBalancer
