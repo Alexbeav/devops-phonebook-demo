@@ -13,7 +13,7 @@ This project demonstrates a complete GitOps CI/CD pipeline with GitHub Actions, 
 
 ### 1. Fork & Clone
 ```bash
-git clone https://github.com/YOUR_USERNAME/devops-ci-cd-k8s-pipeline-demo.git
+git clone https://github.com/alexbeav/devops-ci-cd-k8s-pipeline-demo.git
 cd devops-ci-cd-k8s-pipeline-demo
 ```
 
