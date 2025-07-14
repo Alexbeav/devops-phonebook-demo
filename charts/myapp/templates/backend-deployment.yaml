@@ -25,7 +25,7 @@ spec:
               done
           env:
             - name: DB_HOST
-              value: {{ printf "%s-postgresql" .Release.Name | quote }}
+              value: {{ .Values.postgresql.fullnameOverride | quote }}
             - name: DB_USER
               value: {{ .Values.postgresql.auth.username | quote }}
             - name: DB_NAME
@@ -46,7 +46,7 @@ spec:
               memory: {{ .Values.backend.resources.limits.memory }}
           env:
             - name: DB_HOST
-              value: {{ printf "%s-postgresql" .Release.Name | quote }}
+              value: {{ .Values.postgresql.fullnameOverride | quote }}
             - name: DB_USER
               value: {{ .Values.postgresql.auth.username | quote }}
             - name: DB_PASSWORD
