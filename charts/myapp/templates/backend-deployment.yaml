@@ -25,11 +25,11 @@ spec:
               done
           env:
             - name: DB_HOST
-              value: "myapp-postgresql"
+              value: {{ printf "%s-postgresql" .Release.Name | quote }}
             - name: DB_USER
-              value: "myappuser"
+              value: {{ .Values.postgresql.auth.username | quote }}
             - name: DB_NAME
-              value: "myappdb"
+              value: {{ .Values.postgresql.auth.database | quote }}
             - name: DB_PORT
               value: "5432"
       containers:
@@ -46,13 +46,13 @@ spec:
               memory: {{ .Values.backend.resources.limits.memory }}
           env:
             - name: DB_HOST
-              value: "myapp-postgresql"
+              value: {{ printf "%s-postgresql" .Release.Name | quote }}
             - name: DB_USER
-              value: "myappuser"
+              value: {{ .Values.postgresql.auth.username | quote }}
             - name: DB_PASSWORD
-              value: "myapppassword"
+              value: {{ .Values.postgresql.auth.password | quote }}
             - name: DB_NAME
-              value: "myappdb"
+              value: {{ .Values.postgresql.auth.database | quote }}
             - name: DB_PORT
               value: "5432"
           # readinessProbe:
