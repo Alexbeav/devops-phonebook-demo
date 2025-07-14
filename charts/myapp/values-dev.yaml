@@ -1,4 +1,3 @@
-authSecretName: myapp-db-dev
 nameOverride: myapp-dev
 # IMPORTANT: When deploying to dev, use Helm release name 'myapp-dev' (or Argo CD app name 'myapp-dev')
 # This ensures all resources (including PostgreSQL service) are named correctly for the dev environment.
@@ -43,13 +42,9 @@ frontend:
 postgresql:
   enabled: true
   fullnameOverride: myapp-postgresql
-  database: myappdb
   auth:
-    existingSecret: myapp-db-dev
-    secretKeys:
-      adminPasswordKey: password
-      userPasswordKey: password
-    username: devUser01
+    username: myappuser
+    password: myapppassword
     database: myappdb
   primary:
     persistence:
