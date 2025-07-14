@@ -1,8 +1,9 @@
+authSecretName: myapp-db-dev
 nameOverride: myapp-dev
 # IMPORTANT: When deploying to dev, use Helm release name 'myapp-dev' (or Argo CD app name 'myapp-dev')
 # This ensures all resources (including PostgreSQL service) are named correctly for the dev environment.
 ingress:
-  host: myapp-dev.example.com
+  host: myapp-dev.172-16-3-247.sslip.io
   useIngressRoute: false # Set to true to use Traefik IngressRoute instead of standard Ingress
   tls:
     enabled: true
@@ -42,9 +43,13 @@ frontend:
 postgresql:
   enabled: true
   fullnameOverride: myapp-postgresql
+  database: myappdb
   auth:
-    username: myappuser
-    password: myapppassword
+    existingSecret: myapp-db-dev
+    secretKeys:
+      adminPasswordKey: password
+      userPasswordKey: password
+    username: devUser01
     database: myappdb
   primary:
     persistence:

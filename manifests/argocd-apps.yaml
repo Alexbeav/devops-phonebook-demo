@@ -31,7 +31,7 @@ spec:
   project: phonebook
   source:
     repoURL: 'https://github.com/Alexbeav/devops-ci-cd-k8s-pipeline-demo.git'
-    targetRevision: main
+    targetRevision: dev
     path: charts/myapp
     helm:
       releaseName: myapp-dev
