@@ -31,10 +31,10 @@ The backend pod is not responding or is unavailable.
 - **Solution**: 
   ```bash
   # Check if image exists in GHCR
-  docker pull ghcr.io/alexbeav/devops-ci-cd-k8s-pipeline-demo/backend:<tag>
+  docker pull ghcr.io/YOUR_USERNAME/ci-cd-phonebook-demo/backend:<tag>
   
   # Update image tag if needed
-  kubectl set image deployment/myapp-backend backend=ghcr.io/alexbeav/devops-ci-cd-k8s-pipeline-demo/backend:<new-tag> -n <namespace>
+  kubectl set image deployment/myapp-backend backend=ghcr.io/YOUR_USERNAME/ci-cd-phonebook-demo/backend:<new-tag> -n <namespace>
   ```
 
 #### Database Connection Issues

@@ -44,7 +44,7 @@ spec:
         globalArguments:
           - "--api.insecure=true"
           - "--serversTransport.insecureSkipVerify=true"
-          - "--certificatesresolvers.letsencrypt.acme.email=alexbeav@live.com"
+          - "--certificatesresolvers.letsencrypt.acme.email=your.email@example.com"
           - "--certificatesresolvers.letsencrypt.acme.storage=/data/acme.json"
           - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
           - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"

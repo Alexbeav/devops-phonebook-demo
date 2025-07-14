@@ -19,7 +19,7 @@ spec:
       annotations:
         summary: "MyApp backend pod is down"
         description: "Backend pod has been down for more than 2 minutes"
-        runbook_url: "https://github.com/alexbeav/devops-ci-cd-k8s-pipeline-demo/blob/main/docs/runbooks/backend-down.md"
+        runbook_url: "https://github.com/YOUR_USERNAME/ci-cd-phonebook-demo/blob/main/docs/runbooks/backend-down.md"
     
     - alert: MyAppFrontendDown
       expr: up{job="myapp-frontend"} == 0
@@ -30,7 +30,7 @@ spec:
       annotations:
         summary: "MyApp frontend pod is down"
         description: "Frontend pod has been down for more than 2 minutes"
-        runbook_url: "https://github.com/alexbeav/devops-ci-cd-k8s-pipeline-demo/blob/main/docs/runbooks/frontend-down.md"
+        runbook_url: "https://github.com/YOUR_USERNAME/ci-cd-phonebook-demo/blob/main/docs/runbooks/frontend-down.md"
     
     - alert: MyAppHighMemoryUsage
       expr: |
@@ -45,7 +45,7 @@ spec:
       annotations:
         summary: "High memory usage on MyApp pods"
         description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has been using more than 80% of its memory limit for more than 5 minutes. Current usage: {{ $value | humanizePercentage }}"
-        runbook_url: "https://github.com/alexbeav/devops-ci-cd-k8s-pipeline-demo/blob/main/docs/runbooks/high-memory.md"
+        runbook_url: "https://github.com/YOUR_USERNAME/ci-cd-phonebook-demo/blob/main/docs/runbooks/high-memory.md"
     
     - alert: MyAppHighCPUUsage
       expr: |
@@ -60,7 +60,7 @@ spec:
       annotations:
         summary: "High CPU usage on MyApp pods"
         description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has been using more than 80% of its CPU limit for more than 5 minutes. Current usage: {{ $value | humanizePercentage }}"
-        runbook_url: "https://github.com/alexbeav/devops-ci-cd-k8s-pipeline-demo/blob/main/docs/runbooks/high-cpu.md"
+        runbook_url: "https://github.com/YOUR_USERNAME/ci-cd-phonebook-demo/blob/main/docs/runbooks/high-cpu.md"
     
     - alert: MyAppPodRestartingFrequently
       expr: |
@@ -71,7 +71,7 @@ spec:
       annotations:
         summary: "MyApp pod is restarting frequently"
         description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has restarted {{ $value }} times in the last 15 minutes"
-        runbook_url: "https://github.com/alexbeav/devops-ci-cd-k8s-pipeline-demo/blob/main/docs/runbooks/pod-restarts.md"
+        runbook_url: "https://github.com/YOUR_USERNAME/ci-cd-phonebook-demo/blob/main/docs/runbooks/pod-restarts.md"
     
     - alert: MyAppDatabaseConnectionFails
       expr: |
@@ -83,7 +83,7 @@ spec:
       annotations:
         summary: "MyApp cannot connect to PostgreSQL database"
         description: "PostgreSQL database connection has been failing for more than 1 minute"
-        runbook_url: "https://github.com/alexbeav/devops-ci-cd-k8s-pipeline-demo/blob/main/docs/runbooks/database-connection.md"
+        runbook_url: "https://github.com/YOUR_USERNAME/ci-cd-phonebook-demo/blob/main/docs/runbooks/database-connection.md"
 ---
 # PrometheusRule for dev environment
 apiVersion: monitoring.coreos.com/v1

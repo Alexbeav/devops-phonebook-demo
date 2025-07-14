@@ -2,7 +2,7 @@ nameOverride: myapp-dev
 # IMPORTANT: When deploying to dev, use Helm release name 'myapp-dev' (or Argo CD app name 'myapp-dev')
 # This ensures all resources (including PostgreSQL service) are named correctly for the dev environment.
 ingress:
-  host: myapp-dev.172-16-3-247.sslip.io
+  host: myapp-dev.example.com
   useIngressRoute: true # Set to true to use Traefik IngressRoute instead of standard Ingress
   tls:
     enabled: true
@@ -11,7 +11,7 @@ monitoring:
   enabled: false
   release: prometheus
 backend:
-  image: ghcr.io/alexbeav/devops-ci-cd-k8s-pipeline-demo/backend
+  image: ghcr.io/YOUR_USERNAME/ci-cd-phonebook-demo/backend
   tag: "1d59818"
   replicaCount: 1
   service:
@@ -25,7 +25,7 @@ backend:
       cpu: 250m
       memory: 256Mi
 frontend:
-  image: ghcr.io/alexbeav/devops-ci-cd-k8s-pipeline-demo/frontend
+  image: ghcr.io/YOUR_USERNAME/ci-cd-phonebook-demo/frontend
   tag: "193fd85"
   replicaCount: 1
   service:
