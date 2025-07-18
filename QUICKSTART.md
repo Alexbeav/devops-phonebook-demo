@@ -9,6 +9,84 @@ This project demonstrates a complete GitOps CI/CD pipeline with GitHub Actions, 
 - `helm` CLI installed
 - GitHub account with GHCR access
 
+
+## 🔐 Managing Database Credentials with SealedSecrets
+
+To securely manage your database credentials in Kubernetes, use Bitnami SealedSecrets. This allows you to store encrypted secrets in Git and have them automatically decrypted by the SealedSecrets controller in your cluster.
+
+### 1. Install kubeseal (if not already installed)
+```bash
+curl -OL "https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.30.0/kubeseal-0.30.0-linux-amd64.tar.gz"
+tar -xvzf kubeseal-0.30.0-linux-amd64.tar.gz kubeseal
+sudo install -m 755 kubeseal /usr/local/bin/kubeseal
+```
+
+Connect:
+```bash
+kubeseal --controller-name=sealed-secrets --controller-namespace=sealed-secrets
+```
+
+### 2. Create a Kubernetes Secret manifest (not applied, just used for sealing)
+Example: `myapp-db-dev-secret.yaml`
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: myapp-db-dev
+  namespace: myapp-dev
+type: Opaque
+data:
+  username: $(echo -n 'myappuser' | base64)
+  password: $(echo -n 'myapppassword' | base64)
+```
+
+### 3. Seal the secret using kubeseal
+Encode the values first (for prod):
+```bash
+echo -n 'prodUser01' | base64
+echo -n 'prodPass456@' | base64
+```
+Create a JSON manifest (e.g., `tmp-prod-secret.json`):
+```json
+{
+  "apiVersion": "v1",
+  "kind": "Secret",
+  "metadata": {
+    "name": "myapp-db-prod",
+    "namespace": "myapp-prod"
+  },
+  "type": "Opaque",
+  "data": {
+    "username": "cHJvZFVzZXIwMQ==",
+    "password": "cHJvZFBhc3M0NTZA"
+  }
+}
+```
+Seal it:
+```bash
+kubeseal --controller-name=sealed-secrets --controller-namespace=sealed-secrets --format yaml < tmp-prod-secret.json > manifests/sealedsecret-db-prod.yaml
+```
+Repeat for `myapp-db-dev` in the `myapp-dev` namespace.
+
+### 4. Apply the SealedSecret to your cluster
+```bash
+kubectl apply -f manifests/sealedsecret-db-dev.yaml
+kubectl apply -f manifests/sealedsecret-db-prod.yaml
+```
+
+### 5. Verify the secret is unsealed
+```bash
+kubectl get secret myapp-db-dev -n myapp-dev -o yaml
+kubectl get secret myapp-db-prod -n myapp-prod -o yaml
+```
+
+### 6. Sync your ArgoCD application
+```bash
+argocd app sync phonebook-dev-app
+argocd app sync phonebook-prod-app
+```
+
+---
 ## 🏗️ Setup (5 minutes)
 
 ### 1. Fork & Clone
