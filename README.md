@@ -1,5 +1,8 @@
 # DevOps CI/CD + GitOps Pipeline Demo: Phone Book App
 
+![brave_aIIBfqkOBE](https://github.com/user-attachments/assets/789c8001-dfbd-4497-877b-3b3e5ab950e3)
+
+
 This project demonstrates a modern, production-style DevOps workflow for a full-stack Phone Book app:
 
 - **Frontend:** React (Vite)
