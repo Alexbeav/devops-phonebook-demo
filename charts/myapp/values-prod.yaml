@@ -37,13 +37,17 @@ frontend:
     limits:
       cpu: 100m
       memory: 128Mi
+# Database (PostgreSQL) configuration
+# IMPORTANT: For production, create a SealedSecret named 'myapp-db-credentials' with keys:
+#   postgres-password, password
+# See: docs/runbooks/database-connection.md and README for SealedSecrets setup
 postgresql:
   enabled: true
   fullnameOverride: myapp-postgresql
   auth:
     username: myappuser
-    password: myapppassword
     database: myappdb
+    existingSecret: myapp-db-credentials
   primary:
     persistence:
       enabled: true

@@ -112,12 +112,18 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ghcr.io/${{ steps.repo.outputs.repo }}/backend:${{ steps.backend_sha.outputs.backend_sha }}
+          format: 'table'
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH'
 
       - name: Trivy scan frontend
         if: steps.frontend-changed.outputs.changed == 'true'
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ghcr.io/${{ steps.repo.outputs.repo }}/frontend:${{ steps.frontend_sha.outputs.frontend_sha }}
+          format: 'table'
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH'
 
       - name: Install dependencies (backend)
         run: |

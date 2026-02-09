@@ -32,6 +32,23 @@ spec:
               value: {{ .Values.postgresql.auth.database | quote }}
             - name: DB_PORT
               value: "5432"
+        - name: run-migrations
+          image: {{ .Values.backend.image }}:{{ .Values.backend.tag }}
+          command: ["npm", "run", "migrate"]
+          env:
+            - name: DB_HOST
+              value: {{ .Values.postgresql.fullnameOverride | quote }}
+            - name: DB_USER
+              value: {{ .Values.postgresql.auth.username | quote }}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgresql.auth.existingSecret | default .Values.postgresql.fullnameOverride }}
+                  key: password
+            - name: DB_NAME
+              value: {{ .Values.postgresql.auth.database | quote }}
+            - name: DB_PORT
+              value: "5432"
       containers:
         - name: backend
           image: {{ .Values.backend.image }}:{{ .Values.backend.tag }}
@@ -50,7 +67,10 @@ spec:
             - name: DB_USER
               value: {{ .Values.postgresql.auth.username | quote }}
             - name: DB_PASSWORD
-              value: {{ .Values.postgresql.auth.password | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgresql.auth.existingSecret | default .Values.postgresql.fullnameOverride }}
+                  key: password
             - name: DB_NAME
               value: {{ .Values.postgresql.auth.database | quote }}
             - name: DB_PORT

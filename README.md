@@ -142,78 +142,92 @@ npm run build
 
 ## 🔐 Managing Database Credentials with SealedSecrets
 
-To securely manage your database credentials in Kubernetes, use Bitnami SealedSecrets. This allows you to store encrypted secrets in Git and have them automatically decrypted by the SealedSecrets controller in your cluster.
+The production Helm values (`values-prod.yaml`) reference a Kubernetes Secret via `existingSecret: myapp-db-credentials` instead of storing passwords in Git. [Bitnami SealedSecrets](https://github.com/bitnami-labs/sealed-secrets) lets you encrypt secrets with your cluster's public key so the encrypted form is safe to commit. The SealedSecrets controller in your cluster decrypts them automatically.
 
-### 1. Install kubeseal (if not already installed)
+> **Dev environment:** `values-dev.yaml` keeps an inline password for convenience — the Bitnami PostgreSQL subchart auto-creates the Secret. For production, always use SealedSecrets.
+
+### 1. Install the SealedSecrets controller
+
+```bash
+helm repo add sealed-secrets https://bitnami-labs.github.io/sealed-secrets
+helm install sealed-secrets sealed-secrets/sealed-secrets \
+  --namespace sealed-secrets --create-namespace
+```
+
+### 2. Install the kubeseal CLI
+
 ```bash
 curl -OL "https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.30.0/kubeseal-0.30.0-linux-amd64.tar.gz"
 tar -xvzf kubeseal-0.30.0-linux-amd64.tar.gz kubeseal
 sudo install -m 755 kubeseal /usr/local/bin/kubeseal
 ```
 
-Connect:
-```bash
-kubeseal --controller-name=sealed-secrets --controller-namespace=sealed-secrets
-```
+### 3. Create a plaintext Secret manifest (local only — never commit this)
 
-### 2. Create a Kubernetes Secret manifest (not applied, just used for sealing)
-Example: `myapp-db-dev-secret.yaml`
+The Bitnami PostgreSQL chart expects keys `postgres-password` (superuser) and `password` (application user). The backend deployment also reads `password` from this same Secret.
+
+Create a file called `tmp-prod-secret.yaml` (do **not** commit it):
+
 ```yaml
 apiVersion: v1
 kind: Secret
 metadata:
-  name: myapp-db-dev
-  namespace: myapp-dev
+  name: myapp-db-credentials
+  namespace: myapp-prod
 type: Opaque
-data:
-  username: $(echo -n 'myappuser' | base64)
-  password: $(echo -n 'myapppassword' | base64)
+stringData:
+  postgres-password: "<your-postgres-superuser-password>"
+  password: "<your-app-user-password>"
 ```
 
-### 3. Seal the secret using kubeseal
-Encode the values first (for prod):
-```bash
-echo -n 'prodUser01' | base64
-echo -n 'prodPass456@' | base64
-```
-Create a JSON manifest (e.g., `tmp-prod-secret.json`):
-```json
-{
-  "apiVersion": "v1",
-  "kind": "Secret",
-  "metadata": {
-    "name": "myapp-db-prod",
-    "namespace": "myapp-prod"
-  },
-  "type": "Opaque",
-  "data": {
-    "username": "cHJvZFVzZXIwMQ==",
-    "password": "cHJvZFBhc3M0NTZA"
-  }
-}
-```
-Seal it:
-```bash
-kubeseal --controller-name=sealed-secrets --controller-namespace=sealed-secrets --format yaml < tmp-prod-secret.json > manifests/sealedsecret-db-prod.yaml
-```
-Repeat for `myapp-db-dev` in the `myapp-dev` namespace.
+### 4. Seal the Secret
 
-### 4. Apply the SealedSecret to your cluster
 ```bash
-kubectl apply -f manifests/sealedsecret-db-dev.yaml
+kubeseal \
+  --controller-name=sealed-secrets \
+  --controller-namespace=sealed-secrets \
+  --format yaml \
+  < tmp-prod-secret.yaml \
+  > manifests/sealedsecret-db-prod.yaml
+```
+
+Delete the plaintext file immediately:
+```bash
+rm tmp-prod-secret.yaml
+```
+
+Repeat for dev if desired (change `namespace` to `myapp-dev`).
+
+### 5. Commit the encrypted SealedSecret to Git
+
+The sealed file is safe to commit — it can only be decrypted by your cluster's controller.
+
+```bash
+git add manifests/sealedsecret-db-prod.yaml
+git commit -m "Add sealed database credentials for production"
+git push
+```
+
+### 6. Apply to the cluster (bootstrap)
+
+Before the first ArgoCD sync, create the namespaces and apply the sealed secrets:
+
+```bash
+kubectl create namespace myapp-prod --dry-run=client -o yaml | kubectl apply -f -
 kubectl apply -f manifests/sealedsecret-db-prod.yaml
 ```
 
-### 5. Verify the secret is unsealed
-```bash
-kubectl get secret myapp-db-dev -n myapp-dev -o yaml
-kubectl get secret myapp-db-prod -n myapp-prod -o yaml
-```
+The SealedSecrets controller will decrypt it into a regular Secret named `myapp-db-credentials` in the `myapp-prod` namespace. ArgoCD will then be able to deploy the Helm chart, which references this Secret.
 
-### 6. Sync your ArgoCD application
+### 7. Verify
+
 ```bash
-argocd app sync phonebook-dev-app
-argocd app sync phonebook-prod-app
+# Check the SealedSecret was processed
+kubectl get sealedsecret myapp-db-credentials -n myapp-prod
+
+# Check the decrypted Secret exists with the expected keys
+kubectl get secret myapp-db-credentials -n myapp-prod -o jsonpath='{.data}' | python3 -c "import sys,json; print(list(json.load(sys.stdin).keys()))"
+# Should output: ['password', 'postgres-password']
 ```
 
 ---
@@ -221,18 +235,6 @@ argocd app sync phonebook-prod-app
 - Trivy scans run in CI before image push.
 - Prometheus & Grafana manifests included for monitoring.
 - Ingress is set up for TLS via cert-manager (see `ingress.yaml`).
-
----
-
-## 📝 PostgreSQL Schema
-```sql
-CREATE TABLE contacts (
-    id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
-    phone TEXT NOT NULL,
-    email TEXT
-);
-```
 
 ---
 

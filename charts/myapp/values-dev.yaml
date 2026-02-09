@@ -39,6 +39,8 @@ frontend:
       cpu: 100m
       memory: 128Mi
 # Database (PostgreSQL) configuration
+# NOTE: password is set here for dev convenience only. For production, use existingSecret
+# with SealedSecrets (see values-prod.yaml).
 postgresql:
   enabled: true
   fullnameOverride: myapp-postgresql

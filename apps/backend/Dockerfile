@@ -4,4 +4,4 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm install --production
 COPY . .
-CMD npm run migrate && npm start
+CMD ["npm", "start"]
