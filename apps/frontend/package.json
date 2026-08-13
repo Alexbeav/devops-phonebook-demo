@@ -7,14 +7,17 @@
         "dev": "vite",
         "build": "vite build",
         "preview": "vite preview",
-        "test": "echo \"No frontend tests yet\" && exit 0"
+        "test": "vitest run"
     },
     "dependencies": {
         "react": "^18.2.0",
         "react-dom": "^18.2.0"
     },
     "devDependencies": {
+        "@testing-library/react": "^16.1.0",
         "@vitejs/plugin-react": "^4.6.0",
-        "vite": "^7.0.4"
+        "jsdom": "^25.0.1",
+        "vite": "^7.0.4",
+        "vitest": "^3.2.4"
     }
 }

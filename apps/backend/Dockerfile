@@ -1,7 +1,9 @@
 # Backend Dockerfile (Node.js/Express)
 FROM node:20-alpine
 WORKDIR /app
-COPY package.json package-lock.json* ./
-RUN npm install --production
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
 COPY . .
-CMD ["npm", "start"]
+USER node
+EXPOSE 5000
+CMD ["node", "index.js"]

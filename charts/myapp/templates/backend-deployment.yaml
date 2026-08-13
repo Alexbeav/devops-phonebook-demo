@@ -53,7 +53,8 @@ spec:
         - name: backend
           image: {{ .Values.backend.image }}:{{ .Values.backend.tag }}
           ports:
-            - containerPort: 5000
+            - name: http
+              containerPort: 5000
           resources:
             requests:
               cpu: {{ .Values.backend.resources.requests.cpu }}
@@ -75,27 +76,28 @@ spec:
               value: {{ .Values.postgresql.auth.database | quote }}
             - name: DB_PORT
               value: "5432"
-          # readinessProbe:
-          #   exec:
-          #     command:
-          #       - /bin/sh
-          #       - -c
-          #       - "pg_isready -U {{ .Values.postgresql.auth.username }} -d {{ .Values.postgresql.auth.database }} -h {{ printf "%s-postgresql" .Release.Name }} -p 5432"
-          #   initialDelaySeconds: 40
-          #   periodSeconds: 10
-          #   timeoutSeconds: 5
-          #   failureThreshold: 5
-
-          # livenessProbe:
-          #   exec:
-          #     command:
-          #       - /bin/sh
-          #       - -c
-          #       - "pg_isready -U {{ .Values.postgresql.auth.username }} -d {{ .Values.postgresql.auth.database }} -h {{ printf "%s-postgresql" .Release.Name }} -p 5432"
-          #   initialDelaySeconds: 70
-          #   periodSeconds: 10
-          #   timeoutSeconds: 5
-          #   failureThreshold: 5
+          # Startup tolerance covers the migration initContainers having just
+          # finished; readiness is DB-aware, liveness is process-only.
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 5
+            failureThreshold: 12
+          readinessProbe:
+            httpGet:
+              path: /api/ready
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
 ---
 apiVersion: v1
 kind: Service
