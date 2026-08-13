@@ -1,5 +1,9 @@
 name: GitOps Rollback Application
 
+permissions:
+  contents: write
+  packages: read
+
 on:
   workflow_dispatch:
     inputs:
@@ -11,107 +15,114 @@ on:
           - dev
           - prod
       backend_tag:
-        description: 'Backend image tag to rollback to'
+        description: 'Backend image tag to rollback to (short commit SHA)'
         required: true
         type: string
       frontend_tag:
-        description: 'Frontend image tag to rollback to'
+        description: 'Frontend image tag to rollback to (short commit SHA)'
         required: true
         type: string
 
 jobs:
   rollback:
     runs-on: ubuntu-latest
+    # Dispatch inputs are attacker-influenceable text: they reach shell only
+    # through env vars, never inline ${{ }} interpolation, and are regex
+    # validated before any use.
+    env:
+      ENVIRONMENT: ${{ inputs.environment }}
+      BACKEND_TAG: ${{ inputs.backend_tag }}
+      FRONTEND_TAG: ${{ inputs.frontend_tag }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
-
-      - name: Setup tools
+      - name: Validate inputs and map environment to branch
+        id: target
         run: |
-          sudo wget https://github.com/mikefarah/yq/releases/download/v4.40.5/yq_linux_amd64 -O /usr/bin/yq
-          sudo chmod +x /usr/bin/yq
-          sudo apt-get update && sudo apt-get install -y jq
+          for tag in "$BACKEND_TAG" "$FRONTEND_TAG"; do
+            if ! printf '%s' "$tag" | grep -Eq '^[0-9a-f]{7,40}$'; then
+              echo "::error::Tag '$tag' is not a lowercase hex commit SHA (7-40 chars)"
+              exit 1
+            fi
+          done
+          # Each ArgoCD app tracks its own branch: the rollback commit must
+          # land on that branch or it silently never deploys.
+          case "$ENVIRONMENT" in
+            dev)  echo "branch=dev"  >> "$GITHUB_OUTPUT" ;;
+            prod) echo "branch=main" >> "$GITHUB_OUTPUT" ;;
+            *)    echo "::error::Unknown environment '$ENVIRONMENT'"; exit 1 ;;
+          esac
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ steps.target.outputs.branch }}
 
       - name: Validate image tags exist in GHCR
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Validate backend tag exists
-          backend_exists=$(curl -s -H "Accept: application/vnd.github.v3+json" \
-            "https://ghcr.io/v2/${{ github.repository }}/backend/tags/list" \
-            | jq -r --arg tag "${{ github.event.inputs.backend_tag }}" '.tags // [] | contains([$tag])')
-          
-          # Validate frontend tag exists  
-          frontend_exists=$(curl -s -H "Accept: application/vnd.github.v3+json" \
-            "https://ghcr.io/v2/${{ github.repository }}/frontend/tags/list" \
-            | jq -r --arg tag "${{ github.event.inputs.frontend_tag }}" '.tags // [] | contains([$tag])')
-          
-          if [ "$backend_exists" != "true" ]; then
-            echo "❌ Backend tag ${{ github.event.inputs.backend_tag }} not found in GHCR"
-            exit 1
-          fi
-          
-          if [ "$frontend_exists" != "true" ]; then
-            echo "❌ Frontend tag ${{ github.event.inputs.frontend_tag }} not found in GHCR"
-            exit 1
-          fi
-          
-          echo "✅ Both image tags validated in GHCR"
+          set -euo pipefail
+          repo="${GITHUB_REPOSITORY,,}"
+          check_tag() {
+            component="$1"
+            tag="$2"
+            token=$(curl -fsS -u "${GITHUB_ACTOR}:${GITHUB_TOKEN}" \
+              "https://ghcr.io/token?service=ghcr.io&scope=repository:${repo}/${component}:pull" \
+              | jq -er '.token')
+            curl -fsS -H "Authorization: Bearer ${token}" \
+              "https://ghcr.io/v2/${repo}/${component}/tags/list" \
+              | jq -er '.tags[]' | grep -Fxq "$tag" || {
+                echo "::error::${component} tag '${tag}' not found in GHCR"
+                return 1
+              }
+            echo "OK: ${component}:${tag} exists"
+          }
+          check_tag backend "$BACKEND_TAG"
+          check_tag frontend "$FRONTEND_TAG"
 
-      - name: Get current tags for rollback confirmation
-        id: current_tags
-        run: |
-          current_backend=$(yq e '.backend.tag' charts/myapp/values-${{ github.event.inputs.environment }}.yaml)
-          current_frontend=$(yq e '.frontend.tag' charts/myapp/values-${{ github.event.inputs.environment }}.yaml)
-          echo "current_backend=$current_backend" >> $GITHUB_OUTPUT
-          echo "current_frontend=$current_frontend" >> $GITHUB_OUTPUT
+      - name: Show yq version (preinstalled on ubuntu runners)
+        run: yq --version
 
       - name: Rollback image tags in values file
+        id: rollback
         run: |
-          echo "🔄 Rolling back ${{ github.event.inputs.environment }} environment..."
-          echo "   Backend: ${{ steps.current_tags.outputs.current_backend }} → ${{ github.event.inputs.backend_tag }}"
-          echo "   Frontend: ${{ steps.current_tags.outputs.current_frontend }} → ${{ github.event.inputs.frontend_tag }}"
-          
-          yq e '.backend.tag = "${{ github.event.inputs.backend_tag }}"' -i charts/myapp/values-${{ github.event.inputs.environment }}.yaml
-          yq e '.frontend.tag = "${{ github.event.inputs.frontend_tag }}"' -i charts/myapp/values-${{ github.event.inputs.environment }}.yaml
+          set -euo pipefail
+          file="charts/myapp/values-${ENVIRONMENT}.yaml"
+          current_backend=$(yq e '.backend.tag' "$file")
+          current_frontend=$(yq e '.frontend.tag' "$file")
+          echo "current_backend=$current_backend" >> "$GITHUB_OUTPUT"
+          echo "current_frontend=$current_frontend" >> "$GITHUB_OUTPUT"
+          echo "Rolling back ${ENVIRONMENT}: backend ${current_backend} -> ${BACKEND_TAG}, frontend ${current_frontend} -> ${FRONTEND_TAG}"
+          yq e '.backend.tag = strenv(BACKEND_TAG)' -i "$file"
+          yq e '.frontend.tag = strenv(FRONTEND_TAG)' -i "$file"
 
       - name: Commit and push rollback
+        env:
+          TARGET_BRANCH: ${{ steps.target.outputs.branch }}
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          
-          git add charts/myapp/values-${{ github.event.inputs.environment }}.yaml
-          
-          # Check if there are changes to commit
+          git add "charts/myapp/values-${ENVIRONMENT}.yaml"
           if git diff --staged --quiet; then
-            echo "⚠️ No changes detected - tags already match target versions"
+            echo "No changes - tags already match target versions"
             exit 0
           fi
-          
-          git commit -m "🔄 Rollback ${{ github.event.inputs.environment }} to backend:${{ github.event.inputs.backend_tag }} frontend:${{ github.event.inputs.frontend_tag }}
-
-          Previous versions:
-          - Backend: ${{ steps.current_tags.outputs.current_backend }}
-          - Frontend: ${{ steps.current_tags.outputs.current_frontend }}
-          
-          Triggered by: ${{ github.actor }}"
-          
-          git push
-          
-          echo "✅ Rollback committed successfully"
-          echo "🚀 ArgoCD will automatically sync the changes within ~3 minutes"
+          git commit -m "ci: rollback ${ENVIRONMENT} to backend:${BACKEND_TAG} frontend:${FRONTEND_TAG}"
+          git push origin "HEAD:${TARGET_BRANCH}"
+          echo "Rollback committed to ${TARGET_BRANCH}; ArgoCD will sync it automatically"
 
       - name: Create rollback summary
+        env:
+          PREV_BACKEND: ${{ steps.rollback.outputs.current_backend }}
+          PREV_FRONTEND: ${{ steps.rollback.outputs.current_frontend }}
+          TARGET_BRANCH: ${{ steps.target.outputs.branch }}
         run: |
-          echo "## 🔄 Rollback Summary" >> $GITHUB_STEP_SUMMARY
-          echo "| Component | Previous | New |" >> $GITHUB_STEP_SUMMARY
-          echo "|-----------|----------|-----|" >> $GITHUB_STEP_SUMMARY
-          echo "| **Environment** | - | \`${{ github.event.inputs.environment }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Backend** | \`${{ steps.current_tags.outputs.current_backend }}\` | \`${{ github.event.inputs.backend_tag }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Frontend** | \`${{ steps.current_tags.outputs.current_frontend }}\` | \`${{ github.event.inputs.frontend_tag }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "🚀 **Next Steps:**" >> $GITHUB_STEP_SUMMARY
-          echo "- ArgoCD will detect the changes and sync automatically" >> $GITHUB_STEP_SUMMARY
-          echo "- Monitor deployment status in ArgoCD UI" >> $GITHUB_STEP_SUMMARY
-          echo "- Verify application functionality after rollback" >> $GITHUB_STEP_SUMMARY
+          {
+            echo "## Rollback Summary"
+            echo "| Component | Previous | New |"
+            echo "|-----------|----------|-----|"
+            echo "| Environment | - | \`${ENVIRONMENT}\` (branch \`${TARGET_BRANCH}\`) |"
+            echo "| Backend | \`${PREV_BACKEND}\` | \`${BACKEND_TAG}\` |"
+            echo "| Frontend | \`${PREV_FRONTEND}\` | \`${FRONTEND_TAG}\` |"
+            echo ""
+            echo "ArgoCD will detect the commit on \`${TARGET_BRANCH}\` and sync automatically."
+          } >> "$GITHUB_STEP_SUMMARY"
