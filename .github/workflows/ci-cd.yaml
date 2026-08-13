@@ -1,7 +1,13 @@
 name: CI/CD Pipeline
 
+# GITHUB_TOKEN only - no PAT required. Making the GHCR packages public is a
+# one-time manual step (see QUICKSTART), not something CI does on every build.
+# The tag-update PR is created with GITHUB_TOKEN; such PRs don't retrigger CI,
+# which is fine for values-only changes.
 permissions:
   contents: write
+  packages: write
+  pull-requests: write
 
 on:
   push:
@@ -12,175 +18,151 @@ on:
 jobs:
   build-and-scan:
     runs-on: ubuntu-latest
-    services:
-      docker:
-        image: docker:20.10.7-dind
-
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
-      - name: Update Helm dependencies
-        run: helm dependency update charts/myapp
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '20'
 
-      - name: Get lowercase repo
-        id: repo
-        run: echo "repo=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
-
-      - name: Get backend SHA
-        id: backend_sha
-        run: echo "backend_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-
-      - name: Get frontend SHA
-        id: frontend_sha
-        run: echo "frontend_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-
-      - name: Check if backend changed
-        id: backend-changed
+      - name: Compute image metadata
+        id: meta
         run: |
-          if [ "${{ github.event.before }}" == "0000000000000000000000000000000000000000" ] || [ -z "${{ github.event.before }}" ]; then
-            echo "changed=true" >> $GITHUB_OUTPUT
+          echo "repo=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Detect changed components
+        id: changes
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            range="origin/${BASE_REF}...HEAD"
+          elif [ -z "$BEFORE_SHA" ] || [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            range="" # new branch or force-push baseline unknown: build everything
           else
-            echo "changed=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q '^apps/backend/' && echo true || echo false)" >> $GITHUB_OUTPUT
+            range="${BEFORE_SHA}..HEAD"
           fi
-
-      - name: Build backend Docker image
-        if: steps.backend-changed.outputs.changed == 'true'
-        run: |
-          docker build -t ghcr.io/${{ steps.repo.outputs.repo }}/backend:${{ steps.backend_sha.outputs.backend_sha }} ./apps/backend
-
-      - name: Check if frontend changed
-        id: frontend-changed
-        run: |
-          if [ "${{ github.event.before }}" == "0000000000000000000000000000000000000000" ] || [ -z "${{ github.event.before }}" ]; then
-            echo "changed=true" >> $GITHUB_OUTPUT
+          if [ -z "$range" ]; then
+            backend=true
+            frontend=true
           else
-            echo "changed=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q '^apps/frontend/' && echo true || echo false)" >> $GITHUB_OUTPUT
+            backend=$(git diff --name-only $range | grep -q '^apps/backend/' && echo true || echo false)
+            frontend=$(git diff --name-only $range | grep -q '^apps/frontend/' && echo true || echo false)
           fi
+          echo "backend=$backend" >> "$GITHUB_OUTPUT"
+          echo "frontend=$frontend" >> "$GITHUB_OUTPUT"
+          echo "Detected changes: backend=$backend frontend=$frontend"
 
-      - name: Build frontend Docker image
-        if: steps.frontend-changed.outputs.changed == 'true'
+      # Tests gate everything downstream - no '|| true'.
+      - name: Backend tests
+        working-directory: apps/backend
         run: |
-          docker build -t ghcr.io/${{ steps.repo.outputs.repo }}/frontend:${{ steps.frontend_sha.outputs.frontend_sha }} ./apps/frontend
+          npm ci
+          npm test
 
-      - name: Log in to GHCR
-        run: echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-
-      - name: Push backend Docker image
-        if: steps.backend-changed.outputs.changed == 'true'
+      - name: Frontend tests
+        working-directory: apps/frontend
         run: |
-          docker push ghcr.io/${{ steps.repo.outputs.repo }}/backend:${{ steps.backend_sha.outputs.backend_sha }}
+          npm ci
+          npm test
 
-      - name: Push frontend Docker image
-        if: steps.frontend-changed.outputs.changed == 'true'
+      - name: Build backend image
+        if: steps.changes.outputs.backend == 'true'
         run: |
-          docker push ghcr.io/${{ steps.repo.outputs.repo }}/frontend:${{ steps.frontend_sha.outputs.frontend_sha }}
+          docker build -t ghcr.io/${{ steps.meta.outputs.repo }}/backend:${{ steps.meta.outputs.sha }} ./apps/backend
 
-      - name: Make backend package public
-        if: steps.backend-changed.outputs.changed == 'true'
+      - name: Build frontend image
+        if: steps.changes.outputs.frontend == 'true'
         run: |
-          curl -X PATCH \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer ${{ secrets.GHCR_PAT }}" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            https://api.github.com/user/packages/container/devops-ci-cd-k8s-pipeline-demo%2Fbackend \
-            -d '{"visibility":"public"}'
+          docker build -t ghcr.io/${{ steps.meta.outputs.repo }}/frontend:${{ steps.meta.outputs.sha }} ./apps/frontend
 
-      - name: Make frontend package public
-        if: steps.frontend-changed.outputs.changed == 'true'
-        run: |
-          curl -X PATCH \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer ${{ secrets.GHCR_PAT }}" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            https://api.github.com/user/packages/container/devops-ci-cd-k8s-pipeline-demo%2Ffrontend \
-            -d '{"visibility":"public"}'
-
+      # Scan BEFORE any push: a vulnerable image must never reach the registry.
       - name: Trivy scan backend
-        if: steps.backend-changed.outputs.changed == 'true'
-        uses: aquasecurity/trivy-action@master
+        if: steps.changes.outputs.backend == 'true'
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
-          image-ref: ghcr.io/${{ steps.repo.outputs.repo }}/backend:${{ steps.backend_sha.outputs.backend_sha }}
+          image-ref: ghcr.io/${{ steps.meta.outputs.repo }}/backend:${{ steps.meta.outputs.sha }}
           format: 'table'
           exit-code: '1'
           severity: 'CRITICAL,HIGH'
 
       - name: Trivy scan frontend
-        if: steps.frontend-changed.outputs.changed == 'true'
-        uses: aquasecurity/trivy-action@master
+        if: steps.changes.outputs.frontend == 'true'
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
-          image-ref: ghcr.io/${{ steps.repo.outputs.repo }}/frontend:${{ steps.frontend_sha.outputs.frontend_sha }}
+          image-ref: ghcr.io/${{ steps.meta.outputs.repo }}/frontend:${{ steps.meta.outputs.sha }}
           format: 'table'
           exit-code: '1'
           severity: 'CRITICAL,HIGH'
 
-      - name: Install dependencies (backend)
-        run: |
-          pip install -r apps/backend/requirements.txt
+      # Everything below only runs for pushes - PRs build, test and scan, but
+      # never publish images or touch values files.
+      - name: Log in to GHCR
+        if: github.event_name == 'push' && (steps.changes.outputs.backend == 'true' || steps.changes.outputs.frontend == 'true')
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: Run backend tests
+      - name: Push backend image
+        if: github.event_name == 'push' && steps.changes.outputs.backend == 'true'
         run: |
-          pytest apps/backend/tests || true
+          docker tag ghcr.io/${{ steps.meta.outputs.repo }}/backend:${{ steps.meta.outputs.sha }} ghcr.io/${{ steps.meta.outputs.repo }}/backend:latest
+          docker push ghcr.io/${{ steps.meta.outputs.repo }}/backend:${{ steps.meta.outputs.sha }}
+          docker push ghcr.io/${{ steps.meta.outputs.repo }}/backend:latest
 
-      - name: Install dependencies (frontend)
+      - name: Push frontend image
+        if: github.event_name == 'push' && steps.changes.outputs.frontend == 'true'
         run: |
-          cd apps/frontend && npm ci
+          docker tag ghcr.io/${{ steps.meta.outputs.repo }}/frontend:${{ steps.meta.outputs.sha }} ghcr.io/${{ steps.meta.outputs.repo }}/frontend:latest
+          docker push ghcr.io/${{ steps.meta.outputs.repo }}/frontend:${{ steps.meta.outputs.sha }}
+          docker push ghcr.io/${{ steps.meta.outputs.repo }}/frontend:latest
 
-      - name: Run frontend tests
-        run: |
-          cd apps/frontend && npm test -- --watchAll=false
+      - name: Show yq version (preinstalled on ubuntu runners)
+        if: github.event_name == 'push'
+        run: yq --version
 
-      - name: Install yq
+      # dev branch: commit the dev values bump straight to dev; ArgoCD's dev
+      # app tracks the dev branch. Prod values are never touched from dev.
+      - name: Update dev image tags and commit
+        if: github.event_name == 'push' && github.ref == 'refs/heads/dev' && (steps.changes.outputs.backend == 'true' || steps.changes.outputs.frontend == 'true')
+        env:
+          SHA: ${{ steps.meta.outputs.sha }}
         run: |
-          sudo wget https://github.com/mikefarah/yq/releases/download/v4.40.5/yq_linux_amd64 -O /usr/bin/yq
-          sudo chmod +x /usr/bin/yq
-
-      - name: Update backend image tag in Helm values
-        if: steps.backend-changed.outputs.changed == 'true'
-        run: |
-          yq e '.backend.tag = "${{ steps.backend_sha.outputs.backend_sha }}"' -i charts/myapp/values-dev.yaml
-          yq e '.backend.tag = "${{ steps.backend_sha.outputs.backend_sha }}"' -i charts/myapp/values-prod.yaml
-
-      - name: Update frontend image tag in Helm values
-        if: steps.frontend-changed.outputs.changed == 'true'
-        run: |
-          yq e '.frontend.tag = "${{ steps.frontend_sha.outputs.frontend_sha }}"' -i charts/myapp/values-dev.yaml
-          yq e '.frontend.tag = "${{ steps.frontend_sha.outputs.frontend_sha }}"' -i charts/myapp/values-prod.yaml
-
-      - name: Show tag lines (debug)
-        run: |
-          grep 'tag:' charts/myapp/values-dev.yaml
-          grep 'tag:' charts/myapp/values-prod.yaml
-
-      - name: Auto-commit tag update to dev
-        if: github.ref == 'refs/heads/dev' && (steps.backend-changed.outputs.changed == 'true' || steps.frontend-changed.outputs.changed == 'true')
-        run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@users.noreply.github.com"
-          git add charts/myapp/values-*.yaml
-          git commit -m "CI: Update image tags to backend:${{ steps.backend_sha.outputs.backend_sha }} frontend:${{ steps.frontend_sha.outputs.frontend_sha }}" || echo "No changes"
+          if [ "${{ steps.changes.outputs.backend }}" = "true" ]; then
+            yq e '.backend.tag = strenv(SHA)' -i charts/myapp/values-dev.yaml
+          fi
+          if [ "${{ steps.changes.outputs.frontend }}" = "true" ]; then
+            yq e '.frontend.tag = strenv(SHA)' -i charts/myapp/values-dev.yaml
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add charts/myapp/values-dev.yaml
+          git commit -m "ci: update dev image tags to ${SHA}" || echo "No changes"
           git push origin dev
 
-      - name: Create Pull Request for tag update to main
-        if: github.ref == 'refs/heads/main' && (steps.backend-changed.outputs.changed == 'true' || steps.frontend-changed.outputs.changed == 'true')
-        uses: peter-evans/create-pull-request@v5
+      # main branch: prod values bump goes through a PR for review.
+      - name: Update prod image tags
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && (steps.changes.outputs.backend == 'true' || steps.changes.outputs.frontend == 'true')
+        env:
+          SHA: ${{ steps.meta.outputs.sha }}
+        run: |
+          if [ "${{ steps.changes.outputs.backend }}" = "true" ]; then
+            yq e '.backend.tag = strenv(SHA)' -i charts/myapp/values-prod.yaml
+          fi
+          if [ "${{ steps.changes.outputs.frontend }}" = "true" ]; then
+            yq e '.frontend.tag = strenv(SHA)' -i charts/myapp/values-prod.yaml
+          fi
+
+      - name: Create pull request for prod tag update
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && (steps.changes.outputs.backend == 'true' || steps.changes.outputs.frontend == 'true')
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
-          token: ${{ secrets.GHCR_PAT }}
-          commit-message: "CI: Update image tags to backend:${{ steps.backend_sha.outputs.backend_sha }} frontend:${{ steps.frontend_sha.outputs.frontend_sha }}"
-          title: "CI: Update image tags to backend:${{ steps.backend_sha.outputs.backend_sha }} frontend:${{ steps.frontend_sha.outputs.frontend_sha }}"
-          body: "Automated PR to update image tags in Helm values files."
+          commit-message: "ci: update prod image tags to ${{ steps.meta.outputs.sha }}"
+          title: "ci: update prod image tags to ${{ steps.meta.outputs.sha }}"
+          body: "Automated PR to roll prod to the images built from ${{ steps.meta.outputs.sha }}."
           branch: "ci/tag-update"
           add-paths: |
-            charts/myapp/values-dev.yaml
             charts/myapp/values-prod.yaml
