@@ -11,7 +11,7 @@ monitoring:
   enabled: false
   release: prometheus
 backend:
-  image: ghcr.io/YOUR_USERNAME/ci-cd-phonebook-demo/backend
+  image: ghcr.io/alexbeav/devops-phonebook-demo/backend
   tag: "1d59818"
   replicaCount: 1
   service:
@@ -25,7 +25,7 @@ backend:
       cpu: 250m
       memory: 256Mi
 frontend:
-  image: ghcr.io/YOUR_USERNAME/ci-cd-phonebook-demo/frontend
+  image: ghcr.io/alexbeav/devops-phonebook-demo/frontend
   tag: "193fd85"
   replicaCount: 1
   service:

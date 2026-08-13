@@ -134,7 +134,7 @@ npm run build
 ---
 
 ## 🔄 GitOps with Argo CD
-- See `manifests/argocd-app.yaml` for Argo CD `AppProject` and `Application` resources.
+- See `manifests/argocd-apps.yaml` for Argo CD `AppProject` and `Application` resources.
 - Argo CD will watch your GitHub repo and auto-sync changes to your cluster.
 
 ---

@@ -58,8 +58,8 @@ kubectl apply -f manifests/sealedsecret-db-prod.yaml
 
 ### 1. Fork & Clone
 ```bash
-git clone https://github.com/alexbeav/devops-ci-cd-k8s-pipeline-demo.git
-cd devops-ci-cd-k8s-pipeline-demo
+git clone https://github.com/Alexbeav/devops-phonebook-demo.git
+cd devops-phonebook-demo
 ```
 
 ### 2. Install ArgoCD
