@@ -5,14 +5,18 @@ metadata:
   name: {{ include "myapp.fullname" . }}-ingress
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    {{- if .Values.ingress.tls.enabled }}
     traefik.ingress.kubernetes.io/router.tls: "true"
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    {{- end }}
 spec:
   ingressClassName: traefik
+  {{- if .Values.ingress.tls.enabled }}
   tls:
     - hosts:
         - {{ .Values.ingress.host }}
       secretName: myapp-tls
+  {{- end }}
   rules:
     - host: {{ .Values.ingress.host }}
       http:

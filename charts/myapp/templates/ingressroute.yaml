@@ -8,13 +8,13 @@ spec:
     - web
     - websecure
   routes:
+    # Backend keeps its /api prefix - no stripPrefix middleware. The Express
+    # routes are registered as /api/..., so stripping the prefix would 404.
     - match: Host(`{{ .Values.ingress.host }}`) && PathPrefix(`/api`)
       kind: Rule
       services:
         - name: myapp-backend
           port: 5000
-      middlewares:
-        - name: api-stripprefix
     - match: Host(`{{ .Values.ingress.host }}`)
       kind: Rule
       services:
@@ -22,17 +22,22 @@ spec:
           port: 80
   {{- if .Values.ingress.tls.enabled }}
   tls:
-    secretName: myapp-tls-secret
+    secretName: myapp-tls
   {{- end }}
+{{- if .Values.ingress.tls.enabled }}
 ---
-{{- if .Values.ingress.useIngressRoute }}
-apiVersion: traefik.io/v1alpha1
-kind: Middleware
+# cert-manager provisions the myapp-tls secret referenced above; Traefik's
+# built-in ACME is not used (2 replicas, no shared ACME storage).
+apiVersion: cert-manager.io/v1
+kind: Certificate
 metadata:
-  name: api-stripprefix
+  name: {{ include "myapp.fullname" . }}-cert
 spec:
-  stripPrefix:
-    prefixes:
-      - /api
+  secretName: myapp-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - {{ .Values.ingress.host }}
 {{- end }}
 {{- end }}

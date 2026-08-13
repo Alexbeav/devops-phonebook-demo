@@ -15,10 +15,11 @@ spec:
           kind: Deployment
           replicas: 2
         
+        # Dashboard stays off: enabling it without an auth middleware exposes
+        # the Traefik API to anyone who can reach the route.
         ingressRoute:
           dashboard:
-            enabled: true
-            matchRule: Host(`traefik.example.com`)
+            enabled: false
         
         service:
           type: LoadBalancer
@@ -40,15 +41,10 @@ spec:
             level: INFO
           access:
             enabled: true
-        
-        globalArguments:
-          - "--api.insecure=true"
-          - "--serversTransport.insecureSkipVerify=true"
-          - "--certificatesresolvers.letsencrypt.acme.email=your.email@example.com"
-          - "--certificatesresolvers.letsencrypt.acme.storage=/data/acme.json"
-          - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
-          - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
-          - "--certificatesresolvers.letsencrypt.acme.caserver=https://acme-v02.api.letsencrypt.org/directory"
+
+        # TLS certificates come from cert-manager (see README). Traefik's
+        # built-in ACME is deliberately not configured: with 2 replicas and
+        # no shared storage it would race and lose certificates on restart.
   destination:
     server: https://kubernetes.default.svc
     namespace: traefik-system

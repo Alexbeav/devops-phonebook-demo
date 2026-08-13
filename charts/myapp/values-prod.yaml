@@ -2,10 +2,9 @@ nameOverride: myapp-prod
 environment: prod
 ingress:
   host: myapp.example.com
-  useIngressRoute: true # Set to true to use Traefik IngressRoute instead of standard Ingress
+  useIngressRoute: false # true switches to Traefik IngressRoute (also served by cert-manager)
   tls:
-    enabled: true
-    certResolver: letsencrypt
+    enabled: true # requires cert-manager + a 'letsencrypt-prod' ClusterIssuer (see README)
 monitoring:
   enabled: true
   release: prometheus
