@@ -11,8 +11,8 @@ This project demonstrates a modern, production-style DevOps workflow for a full-
 - **CI/CD:** GitHub Actions → Trivy scan → GHCR → Argo CD
 - **GitOps Deployment:** Argo CD + Helm
 - **Ingress:** Traefik with TLS via cert-manager
-- **Monitoring:** Prometheus with comprehensive alerting rules
-- **Security Scanning:** Trivy
+- **Monitoring:** Prometheus alert rules, discovered by kube-prometheus-stack
+- **Security Scanning:** Trivy (gates images before they are pushed)
 - **Rollback:** One-click GitOps rollback via GitHub Actions
 
 ## 🚀 Quick Start
@@ -29,20 +29,22 @@ This project demonstrates a modern, production-style DevOps workflow for a full-
 
 ### 🏗️ **CI/CD Pipeline**
 - ✅ Conditional builds based on changed components
-- ✅ Container security scanning with Trivy
-- ✅ Multi-environment Helm value management
-- ✅ Automated dependency updates
+- ✅ Trivy scan gates every image *before* it is pushed
+- ✅ Real test gates (backend: node:test + supertest; frontend: vitest)
+- ✅ Pull requests build, test and scan — but never publish
+- ✅ `GITHUB_TOKEN` only (no PAT), third-party actions pinned to commit SHAs
 
 ### 🛡️ **Production-Ready Operations**
-- ✅ Traefik ingress controller with TLS
-- ✅ Comprehensive Prometheus alerting
+- ✅ Traefik ingress controller with TLS (cert-manager)
+- ✅ DB-aware readiness + process liveness probes
+- ✅ Single authoritative NetworkPolicy around PostgreSQL
 - ✅ Detailed runbooks for incident response
-- ✅ Resource optimization and scaling
+- ✅ Resource requests/limits on every workload
 
 ### 📊 **Monitoring & Alerting**
-- ✅ Pod availability monitoring
+- ✅ Pod availability alerts via kube-state-metrics (absent-proof expressions)
+- ✅ Backend `/metrics` (prom-client) + postgres exporter scraping in prod
 - ✅ Resource usage alerts (CPU/Memory)
-- ✅ Database connectivity monitoring
 - ✅ Environment-specific alert thresholds
 
 ---
@@ -75,7 +77,8 @@ docker run --rm -d -p 5432:5432 \
 ```sh
 cd apps/backend
 cp .env.example .env  # Edit if needed
-npm install
+npm ci
+npm test              # node:test + supertest (DB mocked)
 npm run migrate       # Creates contacts table
 npm start             # Starts API on :5000
 ```
@@ -83,48 +86,41 @@ npm start             # Starts API on :5000
 ### 3. Frontend (React)
 ```sh
 cd apps/frontend
-npm install
-npm run dev           # Starts Vite dev server
+npm ci
+npm test              # vitest + testing-library
+npm run dev           # Starts Vite dev server (proxies /api to :5000)
 ```
 
-- The frontend expects the backend at `/api` (see Nginx config for production).
-- For local dev, you may need to set up a Vite proxy to forward `/api` to `localhost:5000`.
+- The frontend calls the backend at `/api`. In production nginx proxies it
+  (config comes from the chart's ConfigMap); in dev the Vite proxy handles it.
 
 ---
 
 ## 🐳 Build & Push Containers
 
-```sh
-# Backend
-cd apps/backend
-npm run build         # If you have a build step
-# Build and push image
-# docker build -t ghcr.io/<your-username>/backend:latest .
-# docker push ghcr.io/<your-username>/backend:latest
+CI builds, scans and pushes images automatically on pushes to `main`/`dev`.
+For a manual build:
 
-# Frontend
-cd apps/frontend
-npm run build
-# docker build -t ghcr.io/<your-username>/frontend:latest .
-# docker push ghcr.io/<your-username>/frontend:latest
+```sh
+docker build -t ghcr.io/alexbeav/devops-phonebook-demo/backend:dev ./apps/backend
+docker build -t ghcr.io/alexbeav/devops-phonebook-demo/frontend:dev ./apps/frontend
 ```
 
 ---
 
 ## ☸️ Deploy to Kubernetes (Helm)
 
-1. **Install dependencies:**
-   ```sh
-   helm dependency update charts/myapp
-   ```
-2. **Deploy:**
+The PostgreSQL subchart is vendored in the repo (`charts/myapp/charts/`), so a
+fresh checkout deploys without any dependency step:
+
+1. **Deploy:**
    ```sh
    helm upgrade --install myapp charts/myapp --namespace myapp --create-namespace
    # For dev/prod:
-   # helm upgrade --install myapp charts/myapp -f charts/myapp/values-dev.yaml --namespace myapp --create-namespace
-   # helm upgrade --install myapp charts/myapp -f charts/myapp/values-prod.yaml --namespace myapp --create-namespace
+   # helm upgrade --install myapp-dev charts/myapp -f charts/myapp/values-dev.yaml --namespace myapp-dev --create-namespace
+   # helm upgrade --install myapp-prod charts/myapp -f charts/myapp/values-prod.yaml --namespace myapp-prod --create-namespace
    ```
-3. **Check status:**
+2. **Check status:**
    ```sh
    kubectl get pods -n myapp
    kubectl get svc -n myapp
@@ -135,7 +131,31 @@ npm run build
 
 ## 🔄 GitOps with Argo CD
 - See `manifests/argocd-apps.yaml` for Argo CD `AppProject` and `Application` resources.
-- Argo CD will watch your GitHub repo and auto-sync changes to your cluster.
+- The **prod** app tracks `main` with `values-prod.yaml`; the **dev** app tracks the
+  `dev` branch with `values-dev.yaml` — create the `dev` branch from `main` if it
+  doesn't exist yet (`git branch dev && git push origin dev`).
+- Argo CD watches the repo and auto-syncs changes to the cluster.
+
+---
+
+## 📋 Cluster Prerequisites
+
+| Component | Why | Install |
+|-----------|-----|---------|
+| Traefik | Ingress | `kubectl apply -f manifests/traefik.yaml` (ArgoCD app) |
+| cert-manager + `letsencrypt-prod` ClusterIssuer | TLS certificates for the Ingress/IngressRoute | [cert-manager docs](https://cert-manager.io/docs/installation/) |
+| kube-prometheus-stack | Discovers the chart's ServiceMonitors and the `PrometheusRule` alerts | see below |
+
+```sh
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm install prometheus prometheus-community/kube-prometheus-stack \
+  --version 88.3.0 --namespace monitoring --create-namespace
+kubectl apply -f manifests/prometheus-alerts.yaml
+```
+
+The release name `prometheus` and namespace `monitoring` matter: the chart's
+ServiceMonitors carry a `release: prometheus` label, and the PostgreSQL
+NetworkPolicy only admits scrapes from Prometheus pods in `monitoring`.
 
 ---
 
@@ -232,9 +252,11 @@ kubectl get secret myapp-db-credentials -n myapp-prod -o jsonpath='{.data}' | py
 
 ---
 ## 🔒 Security & Monitoring
-- Trivy scans run in CI before image push.
-- Prometheus & Grafana manifests included for monitoring.
-- Ingress is set up for TLS via cert-manager (see `ingress.yaml`).
+- Trivy scans run in CI **before** any image is pushed; a CRITICAL/HIGH finding fails the build with nothing published.
+- Monitoring runs on kube-prometheus-stack (see Cluster Prerequisites); the chart ships a backend ServiceMonitor, a postgres exporter (prod), and per-environment `PrometheusRule` alerts.
+- TLS via cert-manager on the standard Ingress (default) or via a `Certificate` on the optional Traefik IngressRoute.
+- PostgreSQL is reachable only from backend pods (and the Prometheus scraper on the exporter port) via NetworkPolicy.
+- The backend container runs as a non-root user; the frontend keeps the stock nginx image (root master process) as an accepted demo tradeoff.
 
 ---
 
@@ -250,16 +272,22 @@ CREATE TABLE contacts (
 
 ## 🚨 Alert Rules
 
-This project includes comprehensive monitoring with Prometheus alert rules:
+Prometheus alert rules ship per environment in `manifests/prometheus-alerts.yaml`.
+Every expression is namespace-scoped and pairs its comparison with an `absent()`
+branch, so a deleted deployment or never-scraped target still fires.
 
-### Critical Alerts
-- **Pod Down**: Application pods unavailable for >2 minutes (prod) or >3 minutes (dev)
-- **Database Connection**: PostgreSQL connectivity issues
+### Prod (critical)
+- **BackendDown / FrontendDown**: no available replicas for >1 minute (kube-state-metrics)
+- **DatabaseDown**: postgres exporter reports down, or its metrics are absent
 
-### Warning Alerts  
-- **High Memory Usage**: Memory usage >80% for >5 minutes
-- **High CPU Usage**: CPU usage >80% for >5 minutes
-- **Frequent Restarts**: Pods restarting repeatedly
+### Prod (warning)
+- **BackendScrapeDown**: `/metrics` target down or never discovered
+- **High Memory / High CPU**: >80% of limit for >5 minutes
+- **Frequent Restarts**: >2 restarts in 15 minutes
+
+### Dev
+- Availability + restart alerts only (warning, more tolerant timing) — dev runs
+  with `monitoring.enabled=false`, so scrape-based alerts are prod-only.
 
 ### Runbooks
 Detailed troubleshooting guides available in `docs/runbooks/`:
@@ -275,14 +303,13 @@ Detailed troubleshooting guides available in `docs/runbooks/`:
 ### GitOps Rollback
 Use GitHub Actions "GitOps Rollback Application" workflow:
 1. Select environment (dev/prod)
-2. Specify backend and frontend image tags
-3. Execute rollback - ArgoCD syncs automatically
+2. Specify backend and frontend image tags (short commit SHAs; validated against GHCR)
+3. Execute — the workflow commits to the branch that environment's ArgoCD app
+   actually tracks (`dev` → dev branch, `prod` → main) and ArgoCD syncs it
 
-### Update Image Tags
-Use GitHub Actions "Update Helm Image Tags" workflow:
-- Automatically fetches latest tags from GHCR
-- Updates both dev and prod environments
-- Runs daily at 6 AM UTC or manually triggered
+There is intentionally **no** "update to latest" cron: CI pins exact image SHAs
+into the values files on every successful build, so a scheduled updater would
+only introduce untracked drift.
 
 ## ✅ What This Demonstrates
 
@@ -294,9 +321,9 @@ Use GitHub Actions "Update Helm Image Tags" workflow:
 
 ### Production Readiness
 - **Multi-environment**: Separate dev/prod with different configurations  
-- **Monitoring**: Comprehensive alerting and runbooks
-- **Security**: Container scanning and secret management
-- **Reliability**: Auto-healing, scaling, and rollback capabilities
+- **Monitoring**: Alerting with runbooks (kube-prometheus-stack)
+- **Security**: Container scanning, secret management, network policy
+- **Reliability**: Probes, ArgoCD self-healing, and one-click rollback
 
 ### Enterprise Features
 - **Observability**: Prometheus metrics and alerts

@@ -76,48 +76,76 @@ kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.pas
 
 ### 3. Deploy Applications
 ```bash
-# Apply ArgoCD applications
-kubectl apply -f manifests/
+# The dev ArgoCD app tracks the dev branch - create it once if missing
+git branch dev && git push origin dev
+
+# Apply the ArgoCD applications (Traefik + the two app environments)
+kubectl apply -f manifests/argocd-apps.yaml -f manifests/traefik.yaml
+
+# Alert rules need the kube-prometheus-stack CRDs first (see step 5)
+kubectl apply -f manifests/prometheus-alerts.yaml
 
 # Access ArgoCD UI (port-forward)
 kubectl port-forward svc/argocd-server -n argocd 8080:443
 ```
 
 ### 4. GitHub Actions Setup
+
+No secrets to create — the workflows run on `GITHUB_TOKEN` alone. Two one-time
+repository settings:
+
+1. **Settings → Actions → General → Workflow permissions**: enable
+   *"Allow GitHub Actions to create and approve pull requests"* (the pipeline
+   opens a PR to roll prod image tags; without this the step fails).
+2. **Package visibility** (once, after the first successful push to GHCR):
+   on each package page (`backend`, `frontend`) → *Package settings* →
+   *Change visibility* → Public, so the cluster can pull without a pull secret.
+   This is an owner-level action that `GITHUB_TOKEN` cannot perform, which is
+   why CI doesn't attempt it.
+
+### 5. Monitoring Stack (kube-prometheus-stack)
 ```bash
-# Generate GitHub Personal Access Token with packages:write scope
-# Add to repository secrets as GHCR_PAT
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm install prometheus prometheus-community/kube-prometheus-stack \
+  --version 88.3.0 --namespace monitoring --create-namespace
 ```
+Release name `prometheus` and namespace `monitoring` are load-bearing: the
+chart's ServiceMonitors carry a `release: prometheus` label and the PostgreSQL
+NetworkPolicy admits scrapes only from Prometheus pods in `monitoring`.
+
+### 6. TLS (cert-manager)
+Install [cert-manager](https://cert-manager.io/docs/installation/) and create a
+`ClusterIssuer` named `letsencrypt-prod`; the chart's Ingress references it.
 
 ## 🎯 Features Demonstrated
 
 - ✅ **Multi-environment GitOps** (dev/prod)
 - ✅ **Automated image builds** with SHA tagging
-- ✅ **Container security scanning** with Trivy
-- ✅ **Helm chart templating**
+- ✅ **Trivy scan gate before push**
+- ✅ **Real test gates** (node:test + supertest, vitest)
+- ✅ **Helm chart templating** (bare install works from a fresh clone)
 - ✅ **ArgoCD auto-sync**
-- ✅ **PostgreSQL with persistence**
-- ✅ **Traefik ingress with TLS**
+- ✅ **PostgreSQL with persistence + NetworkPolicy**
+- ✅ **Traefik ingress with TLS via cert-manager**
 - ✅ **One-click rollbacks**
-- ✅ **Prometheus monitoring & alerting**
+- ✅ **Prometheus alerting via kube-prometheus-stack**
 
 ## 🔄 Testing the Pipeline
 
 1. **Make a code change** in `apps/backend/` or `apps/frontend/`
-2. **Push to main** - GitHub Actions will build and tag new images
-3. **ArgoCD syncs automatically** within ~3 minutes
+2. **Push to `dev`** — CI tests, builds, scans, pushes, and commits the new
+   image SHA to `values-dev.yaml`; ArgoCD syncs the dev app
+3. **Push (or merge) to `main`** — same, but the prod values bump arrives as a
+   PR (`ci/tag-update`); merging it rolls prod
 4. **Verify deployment** in Kubernetes
 
 ## 🎮 Manual Operations
 
 ### Rollback Application
 - Go to **Actions** → **GitOps Rollback Application**
-- Select environment and image tags
-- Execute rollback
-
-### Update Image Tags
-- Go to **Actions** → **Update Helm Image Tags**
-- Run workflow to sync latest GHCR tags
+- Select environment and image tags (short commit SHAs)
+- The workflow validates the tags exist in GHCR and commits to the branch that
+  environment's ArgoCD app tracks (`dev` → dev branch, `prod` → main)
 
 ## 📊 Monitoring
 
@@ -139,28 +167,27 @@ This demo showcases production-ready patterns:
 
 ## 🚨 Alert Rules
 
-The project includes comprehensive Prometheus alert rules:
+Per-environment `PrometheusRule` resources (see `manifests/prometheus-alerts.yaml`),
+all namespace-scoped with `absent()` companions so missing series still fire:
 
-### Critical Alerts
-- **MyAppPodDown**: Pod unavailable for >2 minutes
-- **MyAppDatabaseConnectionFails**: Database connection issues
+### Prod
+- **MyAppProdBackendDown / MyAppProdFrontendDown** (critical): no available replicas >1m
+- **MyAppProdDatabaseDown** (critical): postgres exporter down or absent
+- **MyAppProdBackendScrapeDown**, **HighMemory/HighCPU**, **PodRestartingFrequently** (warning)
 
-### Warning Alerts  
-- **MyAppHighMemoryUsage**: Memory usage >80% for >5 minutes
-- **MyAppHighCPUUsage**: CPU usage >80% for >5 minutes
-- **MyAppPodRestartingFrequently**: Frequent pod restarts
-
-### Environment-Specific Alerts
-- **Dev**: More tolerant thresholds (3-minute delays)
-- **Prod**: Strict thresholds (1-minute delays for critical alerts)
+### Dev
+- Availability + restart alerts only, with more tolerant timing (dev doesn't
+  enable scraping)
 
 ## 🛠️ Troubleshooting
 
 ### Common Issues
-1. **Images not building**: Check GHCR_PAT secret is set
-2. **ArgoCD not syncing**: Verify applications are deployed with `kubectl get applications -n argocd`
-3. **Ingress not working**: Ensure Traefik is deployed and LoadBalancer has external IP
-4. **Database connection issues**: Check PostgreSQL pod logs and service connectivity
+1. **Prod tag-update PR fails**: enable "Allow GitHub Actions to create and approve pull requests" (Settings → Actions → General)
+2. **Cluster can't pull images**: make the GHCR packages public (one-time, see GitHub Actions Setup)
+3. **ArgoCD not syncing**: Verify applications are deployed with `kubectl get applications -n argocd`
+4. **Ingress not working**: Ensure Traefik is deployed and LoadBalancer has external IP
+5. **No metrics/alerts**: confirm kube-prometheus-stack is installed as release `prometheus` in namespace `monitoring`
+6. **Database connection issues**: Check PostgreSQL pod logs and service connectivity
 
 ### Debugging Commands
 ```bash

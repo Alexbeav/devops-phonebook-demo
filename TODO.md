@@ -1,48 +1,23 @@
-# TODO & Verification Checklist
+# TODO & Future Improvements
 
-## General
-- [ ] Verify LICENSE file is present and correct
-- [ ] Verify CONTRIBUTING.md is present and clear
-- [ ] Verify README.md is up to date
-
-## Backend
-- [ ] Test /api/health endpoint returns { status: 'ok' }
-- [ ] Test /api/hello endpoint returns { message: 'Hello from backend!' }
-- [ ] Confirm .dockerignore is present and excludes node_modules, dist, .env, etc.
-
-## Frontend
-- [ ] Confirm .dockerignore is present and excludes node_modules, dist, .env, etc.
-- [ ] Confirm public/robots.txt is present and blocks indexing
-- [ ] Confirm public/health.html is present and accessible
-
-## Helm Chart
-- [ ] Confirm charts/myapp/.dockerignore is present and excludes charts/, tmp/, *.tgz, *.lock
-
-## CI/CD
-- [ ] Confirm GitHub Actions pipeline runs without privileged error
-- [ ] Confirm Trivy scans run for both backend and frontend images
-- [ ] Confirm build, test, and deploy steps work as expected
-
-## Monitoring & Security
-- [ ] Confirm Prometheus & Grafana manifests are present
-- [ ] Confirm Trivy scan results are visible in CI logs
-
-## Collaboration
-- [ ] Confirm CONTRIBUTING.md provides guidance for new contributors
+## Done (2026-08 remediation)
+- [x] Real backend test suite (node:test + supertest, DB mocked) gating CI
+- [x] Real frontend test (vitest + testing-library) gating CI
+- [x] Trivy scan moved ahead of image push
+- [x] DB-aware readiness (`/api/ready`) + process liveness (`/api/health`) probes
+- [x] Backend `/metrics` endpoint (prom-client)
+- [x] Single authoritative PostgreSQL NetworkPolicy (subchart policy disabled)
+- [x] Rollback workflow targets the branch each environment actually tracks
+- [x] `GITHUB_TOKEN`-only workflows, third-party actions pinned to commit SHAs
+- [x] Vendored PostgreSQL subchart committed; bare `helm install` works from a fresh clone
+- [x] cert-manager as the single TLS path; Traefik insecure flags removed
 
 ## Future Improvements
-- [ ] Add automated tests for backend and frontend
-- [ ] Add semantic versioning for Docker images
-- [ ] Add Terraform for cloud infrastructure (AWS or Azure)
-- [ ] Add Argo Rollouts and Loki for advanced delivery/logging
-
----
-
-## Verification Steps
-- Run backend and check /api/health and /api/hello endpoints
-- Run frontend and check /health.html and robots.txt
-- Build Docker images and confirm .dockerignore is respected
-- Run CI/CD pipeline and confirm all steps succeed
-- Check Helm chart deployment and verify .dockerignore
-- Review LICENSE and CONTRIBUTING.md for completeness
-- Review README.md for clarity and accuracy
+- [ ] Live-PostgreSQL smoke test in CI (service container) alongside the mocked suite
+- [ ] Non-root frontend image (nginx-unprivileged; requires port + chart changes)
+- [ ] Horizontal Pod Autoscaler for the backend
+- [ ] Argo Rollouts for progressive delivery
+- [ ] Loki for log aggregation
+- [ ] Terraform for cloud infrastructure (AWS or Azure)
+- [ ] Semantic versioning for Docker images
+- [ ] Grafana dashboard JSON for the app's metrics

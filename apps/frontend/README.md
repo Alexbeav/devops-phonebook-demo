@@ -1,12 +1,14 @@
 # Frontend Service
 
-React/Vite frontend application for the DevOps CI/CD Pipeline Demo.
+React (Vite) frontend for the phonebook demo, served by nginx in production.
+The `/api` proxy configuration comes from the Helm chart's ConfigMap
+(`charts/myapp/templates/frontend-nginx-configmap.yaml`); the Vite dev server
+proxies `/api` to `localhost:5000`.
 
-## Features
-- Modern React application
-- Vite build system
-- Responsive design
-- Nginx serving in production
-
-# Force rebuild Mon Jul 14 00:12:50 UTC 2025
-# Update: Make packages publicly visible on GHCR
+## Development
+```sh
+npm ci
+npm test        # vitest + testing-library
+npm run dev     # dev server with /api proxy
+npm run build
+```
