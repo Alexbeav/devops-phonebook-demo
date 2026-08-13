@@ -101,10 +101,13 @@ apiVersion: v1
 kind: Service
 metadata:
   name: myapp-backend
+  labels:
+    app: myapp-backend
 spec:
   type: {{ .Values.backend.service.type }}
   ports:
-    - port: {{ .Values.backend.service.port }}
+    - name: http
+      port: {{ .Values.backend.service.port }}
       targetPort: 5000
   selector:
     app: myapp-backend

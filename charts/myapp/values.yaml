@@ -1,0 +1,66 @@
+# Default values. A bare `helm install myapp charts/myapp` renders and installs
+# with these; values-dev.yaml / values-prod.yaml overlay per-environment settings
+# and are the files CI keeps up to date with pinned image SHAs.
+nameOverride: myapp
+
+ingress:
+  host: myapp.local
+  useIngressRoute: false # true switches to Traefik IngressRoute (also served by cert-manager)
+  tls:
+    enabled: false # requires cert-manager + a 'letsencrypt-prod' ClusterIssuer (see README)
+
+monitoring:
+  enabled: false # requires kube-prometheus-stack (see README)
+  release: prometheus
+
+backend:
+  image: ghcr.io/alexbeav/devops-phonebook-demo/backend
+  # CI pushes a moving 'latest' alongside immutable SHA tags; the env overlays pin SHAs.
+  tag: "latest"
+  replicaCount: 1
+  service:
+    type: ClusterIP
+    port: 5000
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+frontend:
+  image: ghcr.io/alexbeav/devops-phonebook-demo/frontend
+  tag: "latest"
+  replicaCount: 1
+  service:
+    type: ClusterIP
+    port: 80
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+
+postgresql:
+  enabled: true
+  fullnameOverride: myapp-postgresql
+  auth:
+    username: myappuser
+    # Inline password is for local/demo installs only; production overlays it
+    # with existingSecret (SealedSecrets), see values-prod.yaml and README.
+    password: myapppassword
+    database: myappdb
+  primary:
+    networkPolicy:
+      # The chart ships its own single authoritative policy
+      # (templates/networkpolicy.yaml); the subchart's permissive one stays off.
+      enabled: false
+    persistence:
+      enabled: true
+      size: 8Gi
+      storageClass: ''
+  metrics:
+    enabled: false

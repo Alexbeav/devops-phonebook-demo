@@ -1,4 +1,8 @@
 {{- if .Values.postgresql.enabled }}
+# Single authoritative policy for PostgreSQL access. The Bitnami subchart's
+# own NetworkPolicy is disabled in values (primary.networkPolicy.enabled=false)
+# because policies are additive - its permissive allowExternal default would
+# override this one.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -7,7 +11,8 @@ spec:
   podSelector:
     matchLabels:
       app.kubernetes.io/name: postgresql
-      app.kubernetes.io/instance: {{ .Values.postgresql.fullnameOverride }}
+      # Bitnami labels pods with the Helm release name, not fullnameOverride
+      app.kubernetes.io/instance: {{ .Release.Name }}
   policyTypes:
     - Ingress
   ingress:
@@ -18,4 +23,18 @@ spec:
       ports:
         - protocol: TCP
           port: 5432
+    {{- if .Values.monitoring.enabled }}
+    # The postgres exporter is a sidecar in the PostgreSQL pod this policy
+    # selects; without this rule kube-prometheus-stack could not scrape it.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus
+      ports:
+        - protocol: TCP
+          port: 9187
+    {{- end }}
 {{- end }}

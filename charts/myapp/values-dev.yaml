@@ -1,6 +1,7 @@
 nameOverride: myapp-dev
-# IMPORTANT: When deploying to dev, use Helm release name 'myapp-dev' (or Argo CD app name 'myapp-dev')
-# This ensures all resources (including PostgreSQL service) are named correctly for the dev environment.
+# Dev and prod isolate by NAMESPACE (myapp-dev / myapp-prod), not by resource
+# names - workload names are fixed (myapp-backend etc.). Deploy with Helm
+# release name 'myapp-dev' so the Bitnami subchart labels line up.
 ingress:
   host: myapp-dev.example.com
   useIngressRoute: false # true switches to Traefik IngressRoute (also served by cert-manager)
@@ -28,7 +29,7 @@ frontend:
   tag: "193fd85"
   replicaCount: 1
   service:
-    type: LoadBalancer
+    type: ClusterIP # Traefik fronts the app; no direct LoadBalancer exposure
     port: 80
   resources:
     requests:
@@ -48,6 +49,8 @@ postgresql:
     password: myapppassword
     database: myappdb
   primary:
+    networkPolicy:
+      enabled: false # single authoritative policy lives in templates/networkpolicy.yaml
     persistence:
       enabled: true
       size: 8Gi

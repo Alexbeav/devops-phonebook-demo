@@ -1,5 +1,4 @@
 nameOverride: myapp-prod
-environment: prod
 ingress:
   host: myapp.example.com
   useIngressRoute: false # true switches to Traefik IngressRoute (also served by cert-manager)
@@ -27,7 +26,7 @@ frontend:
   tag: "193fd85"
   replicaCount: 3
   service:
-    type: LoadBalancer
+    type: ClusterIP # Traefik fronts the app; no direct LoadBalancer exposure
     port: 80
   resources:
     requests:
@@ -48,6 +47,8 @@ postgresql:
     database: myappdb
     existingSecret: myapp-db-credentials
   primary:
+    networkPolicy:
+      enabled: false # single authoritative policy lives in templates/networkpolicy.yaml
     persistence:
       enabled: true
       size: 32Gi
@@ -72,3 +73,11 @@ postgresql:
       periodSeconds: 10
       timeoutSeconds: 5
       failureThreshold: 5
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      labels:
+        # kube-prometheus-stack only discovers ServiceMonitors carrying its
+        # release label; without this the exporter is never scraped.
+        release: prometheus

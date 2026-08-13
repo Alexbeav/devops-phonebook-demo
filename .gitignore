@@ -30,6 +30,9 @@ coverage/
 
 # Helm
 *.tgz
+# ...but the vendored PostgreSQL subchart must be committed: fresh checkouts
+# (and the ArgoCD source) need it for the chart to render at all.
+!charts/myapp/charts/postgresql-16.7.16.tgz
 
 ci-cd-k8s-pipeline.zip
 build.txt
