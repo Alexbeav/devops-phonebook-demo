@@ -1,9 +1,12 @@
 nameOverride: myapp-prod
 ingress:
-  host: myapp.example.com
-  useIngressRoute: false # true switches to Traefik IngressRoute (also served by cert-manager)
+  host: phonebook.crosstalkis.com
+  # IngressRoute mode: the homelab Traefik runs CRD-provider only (no standard
+  # Ingress support); TLS comes from the cert-manager Certificate the chart
+  # creates (letsencrypt-prod, DNS-01).
+  useIngressRoute: true
   tls:
-    enabled: true # requires cert-manager + a 'letsencrypt-prod' ClusterIssuer (see README)
+    enabled: true
 monitoring:
   enabled: true
   release: prometheus

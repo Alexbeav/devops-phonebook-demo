@@ -3,10 +3,13 @@ nameOverride: myapp-dev
 # names - workload names are fixed (myapp-backend etc.). Deploy with Helm
 # release name 'myapp-dev' so the Bitnami subchart labels line up.
 ingress:
-  host: myapp-dev.example.com
-  useIngressRoute: false # true switches to Traefik IngressRoute (also served by cert-manager)
+  host: phonebook-dev.crosstalkis.com
+  # IngressRoute mode: the homelab Traefik runs CRD-provider only (no standard
+  # Ingress support); TLS comes from the cert-manager Certificate the chart
+  # creates (letsencrypt-prod, DNS-01).
+  useIngressRoute: true
   tls:
-    enabled: true # requires cert-manager + a 'letsencrypt-prod' ClusterIssuer (see README)
+    enabled: true
 monitoring:
   enabled: false
   release: prometheus
