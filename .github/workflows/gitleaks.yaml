@@ -32,11 +32,13 @@ jobs:
       - name: Self-test detector against a known positive
         run: |
           set -euo pipefail
-          # Sample key assembled at runtime so this workflow file itself never
-          # contains a contiguous secret-shaped string in git history.
+          # Synthetic GitHub-PAT-shaped sample, assembled at runtime so this
+          # workflow file never contains a contiguous secret-shaped string in
+          # git history. (AWS's documented example key is unsuitable here:
+          # gitleaks' default config deliberately allowlists it.)
           mkdir -p "$RUNNER_TEMP/selftest"
-          printf 'aws_access_key_id = AKIA%s\n' "IOSFODNN7EXAMPLE" > "$RUNNER_TEMP/selftest/leak.txt"
-          if ./gitleaks dir --no-banner "$RUNNER_TEMP/selftest"; then
+          printf 'token = ghp_%s\n' "x9Kq2mVt7wRbY4nJc8LpD3fGhS6aZeQ1uWoM" > "$RUNNER_TEMP/selftest/leak.txt"
+          if ./gitleaks dir --no-banner --redact "$RUNNER_TEMP/selftest"; then
             echo "::error::gitleaks did not detect a known-positive sample - defective release?"
             exit 1
           fi
