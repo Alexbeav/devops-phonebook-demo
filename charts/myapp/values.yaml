@@ -8,6 +8,15 @@ ingress:
   useIngressRoute: false # true switches to Traefik IngressRoute (also served by cert-manager)
   tls:
     enabled: false # requires cert-manager + a 'letsencrypt-prod' ClusterIssuer (see README)
+  # Optional Traefik middlewares applied to both routes (IngressRoute mode),
+  # e.g. rate limiting / WAF chains that already exist in the cluster.
+  middlewares: []
+
+# Scheduled wipe of the contacts table - enable on publicly exposed demo
+# instances so junk never accumulates.
+demoReset:
+  enabled: false
+  schedule: "0 4 * * *"
 
 monitoring:
   enabled: false # requires kube-prometheus-stack (see README)

@@ -10,6 +10,13 @@ ingress:
   useIngressRoute: true
   tls:
     enabled: true
+  middlewares:
+    - name: crowdsec-bouncer
+      namespace: traefik
+    - name: rate-limit
+      namespace: traefik
+    - name: security-headers
+      namespace: traefik
 monitoring:
   enabled: false
   release: prometheus

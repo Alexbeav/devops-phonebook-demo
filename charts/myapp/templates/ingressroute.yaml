@@ -12,11 +12,29 @@ spec:
     # routes are registered as /api/..., so stripping the prefix would 404.
     - match: Host(`{{ .Values.ingress.host }}`) && PathPrefix(`/api`)
       kind: Rule
+      {{- with .Values.ingress.middlewares }}
+      middlewares:
+        {{- range . }}
+        - name: {{ .name }}
+          {{- with .namespace }}
+          namespace: {{ . }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
       services:
         - name: myapp-backend
           port: 5000
     - match: Host(`{{ .Values.ingress.host }}`)
       kind: Rule
+      {{- with .Values.ingress.middlewares }}
+      middlewares:
+        {{- range . }}
+        - name: {{ .name }}
+          {{- with .namespace }}
+          namespace: {{ . }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
       services:
         - name: myapp-frontend
           port: 80

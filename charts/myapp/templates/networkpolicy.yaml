@@ -20,6 +20,12 @@ spec:
         - podSelector:
             matchLabels:
               app: myapp-backend
+        {{- if .Values.demoReset.enabled }}
+        # the scheduled demo-reset job also needs the database
+        - podSelector:
+            matchLabels:
+              app: myapp-demo-reset
+        {{- end }}
       ports:
         - protocol: TCP
           port: 5432
