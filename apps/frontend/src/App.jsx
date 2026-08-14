@@ -3,15 +3,27 @@ import React, { useEffect, useState } from "react";
 export default function App() {
     const [contacts, setContacts] = useState([]);
     const [loading, setLoading] = useState(true);
+    // Fail closed: write controls appear only after the backend explicitly
+    // reports that this deployment is writable.
+    const [readOnly, setReadOnly] = useState(true);
     const [form, setForm] = useState({ name: "", phone: "", email: "" });
     const [error, setError] = useState("");
 
     // Fetch contacts
     useEffect(() => {
-        fetch("/api/contacts")
-            .then((res) => res.json())
-            .then((data) => {
-                setContacts(data);
+        Promise.all([
+            fetch("/api/contacts").then((res) => {
+                if (!res.ok) throw new Error("Contact fetch failed");
+                return res.json();
+            }),
+            fetch("/api/config").then((res) => {
+                if (!res.ok) throw new Error("Config fetch failed");
+                return res.json();
+            }),
+        ])
+            .then(([contactsData, config]) => {
+                setContacts(contactsData);
+                setReadOnly(config.readOnly !== false);
                 setLoading(false);
             })
             .catch(() => {
@@ -64,7 +76,7 @@ export default function App() {
         }}>
             <h1 style={{ fontSize: "2rem", marginBottom: "0.5rem", color: "#0099ff" }}>🔵 Phonebook Contacts</h1>
             <div className="label" style={{ color: "#888", fontSize: "0.9rem", marginBottom: "2rem" }}>
-                Served by Nginx inside Docker & Kubernetes
+                {readOnly ? "Public production demo — read-only" : "Development demo — writes enabled"}
             </div>
             <div style={{ display: "flex", gap: 48, width: "100%", maxWidth: 900 }}>
                 <div style={{ flex: 1, minWidth: 300 }}>
@@ -79,15 +91,17 @@ export default function App() {
                                     <span>
                                         <b style={{ color: "#0099ff" }}>{c.name}</b> — {c.phone} {c.email && <span style={{ color: "#888" }}>({c.email})</span>}
                                     </span>
-                                    <button style={{ marginLeft: 16, background: "#222", color: "#ff3366", border: "none", borderRadius: 4, padding: "4px 12px", cursor: "pointer" }} onClick={() => handleDelete(c.id)}>
-                                        Delete
-                                    </button>
+                                    {!readOnly && (
+                                        <button style={{ marginLeft: 16, background: "#222", color: "#ff3366", border: "none", borderRadius: 4, padding: "4px 12px", cursor: "pointer" }} onClick={() => handleDelete(c.id)}>
+                                            Delete
+                                        </button>
+                                    )}
                                 </li>
                             ))}
                         </ul>
                     )}
                 </div>
-                <div style={{ flex: 1, minWidth: 300 }}>
+                {!readOnly && <div style={{ flex: 1, minWidth: 300 }}>
                     <h2 style={{ color: "#0099ff", borderBottom: "1px solid #222", paddingBottom: 8 }}>Add Contact</h2>
                     <form onSubmit={handleAdd} style={{ display: "flex", flexDirection: "column", gap: 12, background: "#181818", padding: 24, borderRadius: 8, maxWidth: 350 }}>
                         <input
@@ -112,7 +126,7 @@ export default function App() {
                         />
                         <button type="submit" style={{ background: "#0099ff", color: "#0f0f0f", border: "none", borderRadius: 4, padding: "8px 0", fontWeight: "bold", cursor: "pointer" }}>Add</button>
                     </form>
-                </div>
+                </div>}
             </div>
         </div>
     );

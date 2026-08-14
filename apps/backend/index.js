@@ -19,6 +19,7 @@ pool.on('error', (err) => {
 });
 
 const port = process.env.PORT || 5000;
-createApp(pool).listen(port, () => {
+const readOnly = process.env.READ_ONLY === 'true';
+createApp(pool, { readOnly }).listen(port, () => {
     console.log(`Backend listening on port ${port}`);
 });

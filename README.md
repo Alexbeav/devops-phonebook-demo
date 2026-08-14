@@ -3,8 +3,9 @@
 **🌐 Live demo: [phonebook.crosstalkis.com](https://phonebook.crosstalkis.com)** — this
 exact repo, GitOps-deployed by ArgoCD to a self-hosted Kubernetes cluster, served
 through Cloudflare + Traefik (CrowdSec, rate limiting, security headers). It's an
-open demo: add and delete contacts freely — **data resets nightly, don't enter real
-information**. Image provenance is publicly verifiable:
+intentionally **read-only** public demo: production rejects contact mutations in
+the backend itself and displays known sample data. The non-public dev deployment
+retains full CRUD for pipeline and application testing. Image provenance is publicly verifiable:
 `gh attestation verify oci://ghcr.io/alexbeav/devops-phonebook-demo/backend:<tag> --owner Alexbeav`
 
 ![brave_aIIBfqkOBE](https://github.com/user-attachments/assets/789c8001-dfbd-4497-877b-3b3e5ab950e3)
@@ -21,6 +22,7 @@ This project demonstrates a modern, production-style DevOps workflow for a full-
 - **Monitoring:** Prometheus alert rules, discovered by kube-prometheus-stack
 - **Security Scanning:** Trivy (gates images before they are pushed)
 - **Rollback:** One-click GitOps rollback via GitHub Actions
+- **Public-mode safety:** Production is application-enforced read-only; dev remains writable
 
 ## 🚀 Quick Start
 
@@ -100,6 +102,8 @@ npm run dev           # Starts Vite dev server (proxies /api to :5000)
 
 - The frontend calls the backend at `/api`. In production nginx proxies it
   (config comes from the chart's ConfigMap); in dev the Vite proxy handles it.
+- Set `READ_ONLY=true` to make the backend reject all contact mutations. The
+  frontend reads `/api/config` and removes its write controls in that mode.
 
 ---
 
@@ -263,7 +267,14 @@ kubectl get secret myapp-db-credentials -n myapp-prod -o jsonpath='{.data}' | py
 - Monitoring runs on kube-prometheus-stack (see Cluster Prerequisites); the chart ships a backend ServiceMonitor, a postgres exporter (prod), and per-environment `PrometheusRule` alerts.
 - TLS via cert-manager on the standard Ingress (default) or via a `Certificate` on the optional Traefik IngressRoute.
 - PostgreSQL is reachable only from backend pods (and the Prometheus scraper on the exporter port) via NetworkPolicy.
-- The backend container runs as a non-root user; the frontend keeps the stock nginx image (root master process) as an accepted demo tradeoff.
+- Both application containers run as non-root users with read-only root filesystems,
+  all Linux capabilities dropped, and privilege escalation disabled.
+- The public production API permits contact reads only. `POST`, `PUT`, `PATCH`,
+  and `DELETE` receive `405 Method Not Allowed` from the backend. Development
+  remains writable through `backend.readOnly: false`.
+- Contact routes also have an application-layer request ceiling. Cloudflare and
+  Traefik provide the per-client edge limits; the backend limit is a final
+  aggregate safety ceiling and does not trust forwarded client-IP headers.
 
 ---
 

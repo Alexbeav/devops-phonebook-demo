@@ -133,6 +133,8 @@ spec:
               value: {{ .Values.postgresql.auth.database | quote }}
             - name: DB_PORT
               value: "5432"
+            - name: READ_ONLY
+              value: {{ .Values.backend.readOnly | quote }}
           # Startup tolerance covers the migration initContainers having just
           # finished; readiness is DB-aware, liveness is process-only.
           startupProbe:

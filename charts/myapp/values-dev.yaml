@@ -26,6 +26,7 @@ monitoring:
 backend:
   image: ghcr.io/alexbeav/devops-phonebook-demo/backend
   tag: "98a8457"
+  readOnly: false
   replicaCount: 1
   service:
     type: ClusterIP
