@@ -2,9 +2,21 @@ import express from 'express';
 import client from 'prom-client';
 
 // App factory with an injectable pg pool so tests can supply a fake.
-export function createApp(pool) {
+export function createApp(pool, { readOnly = false } = {}) {
     const app = express();
-    app.use(express.json());
+
+    // Production is a public CI/CD showcase, not a public data-entry service.
+    // Enforce read-only mode here so bypassing the UI or edge cannot restore
+    // write access. Reject mutations before parsing their request bodies.
+    app.use('/api/contacts', (req, res, next) => {
+        if (readOnly && !['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+            res.set('Allow', 'GET, HEAD, OPTIONS');
+            return res.status(405).json({ error: 'This deployment is read-only' });
+        }
+        next();
+    });
+
+    app.use(express.json({ limit: '8kb', strict: true }));
 
     const register = new client.Registry();
     client.collectDefaultMetrics({ register });
@@ -20,16 +32,34 @@ export function createApp(pool) {
             typeof phone !== 'string' || phone.trim() === '') {
             return res.status(400).json({ error: 'name and phone are required' });
         }
+        if (name.trim().length > 100 || phone.trim().length > 50 ||
+            (req.body.email != null &&
+             (typeof req.body.email !== 'string' || req.body.email.trim().length > 254))) {
+            return res.status(400).json({ error: 'contact fields exceed permitted lengths' });
+        }
         next();
     };
 
+    const validateId = (req, res, next) => {
+        if (!/^[1-9]\d*$/.test(req.params.id)) {
+            return res.status(400).json({ error: 'id must be a positive integer' });
+        }
+        next();
+    };
+
+    app.get('/api/config', (req, res) => {
+        res.json({ readOnly });
+    });
+
     // CRUD Endpoints
     app.get('/api/contacts', asyncHandler(async (req, res) => {
-        const { rows } = await pool.query('SELECT * FROM contacts ORDER BY id');
+        const { rows } = await pool.query(
+            'SELECT id, name, phone, email FROM contacts ORDER BY id LIMIT 500'
+        );
         res.json(rows);
     }));
 
-    app.get('/api/contacts/:id', asyncHandler(async (req, res) => {
+    app.get('/api/contacts/:id', validateId, asyncHandler(async (req, res) => {
         const { id } = req.params;
         const { rows } = await pool.query('SELECT * FROM contacts WHERE id = $1', [id]);
         if (rows.length === 0) return res.status(404).json({ error: 'Not found' });
@@ -37,7 +67,9 @@ export function createApp(pool) {
     }));
 
     app.post('/api/contacts', validateContact, asyncHandler(async (req, res) => {
-        const { name, phone, email } = req.body;
+        const name = req.body.name.trim();
+        const phone = req.body.phone.trim();
+        const email = req.body.email?.trim() || null;
         const { rows } = await pool.query(
             'INSERT INTO contacts (name, phone, email) VALUES ($1, $2, $3) RETURNING *',
             [name, phone, email]
@@ -45,9 +77,11 @@ export function createApp(pool) {
         res.status(201).json(rows[0]);
     }));
 
-    app.put('/api/contacts/:id', validateContact, asyncHandler(async (req, res) => {
+    app.put('/api/contacts/:id', validateId, validateContact, asyncHandler(async (req, res) => {
         const { id } = req.params;
-        const { name, phone, email } = req.body;
+        const name = req.body.name.trim();
+        const phone = req.body.phone.trim();
+        const email = req.body.email?.trim() || null;
         const { rowCount, rows } = await pool.query(
             'UPDATE contacts SET name = $1, phone = $2, email = $3 WHERE id = $4 RETURNING *',
             [name, phone, email, id]
@@ -56,7 +90,7 @@ export function createApp(pool) {
         res.json(rows[0]);
     }));
 
-    app.delete('/api/contacts/:id', asyncHandler(async (req, res) => {
+    app.delete('/api/contacts/:id', validateId, asyncHandler(async (req, res) => {
         const { id } = req.params;
         const { rowCount } = await pool.query('DELETE FROM contacts WHERE id = $1', [id]);
         if (rowCount === 0) return res.status(404).json({ error: 'Not found' });
@@ -90,8 +124,14 @@ export function createApp(pool) {
 
     // eslint-disable-next-line no-unused-vars
     app.use((err, req, res, next) => {
-        console.error(err);
         if (res.headersSent) return next(err);
+        if (err.status === 413) {
+            return res.status(413).json({ error: 'Request body too large' });
+        }
+        if (err.status === 400) {
+            return res.status(400).json({ error: 'Invalid request body' });
+        }
+        console.error(err);
         res.status(500).json({ error: 'Internal server error' });
     });
 

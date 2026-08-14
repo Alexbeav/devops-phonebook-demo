@@ -14,7 +14,8 @@ ingress:
       namespace: traefik
     - name: security-headers
       namespace: traefik
-# Public demo instance: nightly contacts wipe (04:00 cluster time)
+# Public demo instance: application-enforced read-only mode plus a nightly
+# reset to known harmless sample data (04:00 cluster time).
 demoReset:
   enabled: true
   schedule: "0 4 * * *"
@@ -24,6 +25,7 @@ monitoring:
 backend:
   image: ghcr.io/alexbeav/devops-phonebook-demo/backend
   tag: "98a8457"
+  readOnly: true
   replicaCount: 3
   service:
     type: ClusterIP

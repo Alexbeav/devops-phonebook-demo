@@ -38,6 +38,9 @@ backend:
   image: ghcr.io/alexbeav/devops-phonebook-demo/backend
   # CI pushes a moving 'latest' alongside immutable SHA tags; the env overlays pin SHAs.
   tag: "latest"
+  # The application rejects POST/PUT/PATCH/DELETE when true. Keep local/dev
+  # writable; production overrides this to true.
+  readOnly: false
   replicaCount: 1
   service:
     type: ClusterIP
