@@ -5,8 +5,9 @@ metadata:
   name: {{ include "myapp.fullname" . }}-ingressroute
 spec:
   entryPoints:
-    - web
-    - websecure
+    {{- range .Values.ingress.entryPoints }}
+    - {{ . }}
+    {{- end }}
   routes:
     # Backend keeps its /api prefix - no stripPrefix middleware. The Express
     # routes are registered as /api/..., so stripping the prefix would 404.

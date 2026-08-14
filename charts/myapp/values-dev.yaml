@@ -11,6 +11,8 @@ ingress:
   # Ingress support); TLS comes from the cert-manager Certificate the chart
   # creates (letsencrypt-prod, DNS-01).
   useIngressRoute: true
+  entryPoints:
+    - websecure
   tls:
     enabled: true
   middlewares:

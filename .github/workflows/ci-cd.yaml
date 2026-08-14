@@ -65,6 +65,17 @@ jobs:
           test "$migration_user" = "myappuser"
           test "$migration_secret" = "myapp-db-credentials"
 
+      - name: Verify production edge isolation settings
+        run: |
+          set -euo pipefail
+
+          entrypoints=$(yq e 'select(.kind == "IngressRoute") | .spec.entryPoints[]' /tmp/prod-render.yaml | paste -sd, -)
+          middlewares=$(yq e 'select(.kind == "IngressRoute") | .spec.routes[].middlewares[].name' /tmp/prod-render.yaml | sort -u | paste -sd, -)
+
+          test "$entrypoints" = "websecure,websecure-cf"
+          echo "$middlewares" | grep -Eq '(^|,)body-limit-phonebook(,|$)'
+          echo "$middlewares" | grep -Eq '(^|,)rate-limit-phonebook(,|$)'
+
   build-and-scan:
     runs-on: ubuntu-latest
     permissions:
