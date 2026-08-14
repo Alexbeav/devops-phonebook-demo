@@ -20,11 +20,26 @@ spec:
         metadata:
           labels:
             app: myapp-demo-reset
+            # NetworkPolicy egress lockdown selects on this label
+            app.kubernetes.io/part-of: devops-phonebook-demo
         spec:
           restartPolicy: Never
+          automountServiceAccountToken: false
+          securityContext:
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
           containers:
             - name: reset
               image: postgres:16
+              securityContext:
+                runAsUser: 999
+                runAsGroup: 999
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop:
+                    - ALL
               command:
                 - psql
                 - -c

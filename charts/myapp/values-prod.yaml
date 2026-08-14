@@ -69,6 +69,10 @@ postgresql:
     database: myappdb
     existingSecret: myapp-db-credentials
   primary:
+    # NetworkPolicy egress lockdown (templates/networkpolicy.yaml) selects on
+    # this label so PostgreSQL is locked down too, not just the app pods.
+    podLabels:
+      app.kubernetes.io/part-of: devops-phonebook-demo
     networkPolicy:
       enabled: false # single authoritative policy lives in templates/networkpolicy.yaml
     persistence:

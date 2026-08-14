@@ -11,6 +11,8 @@ ingress:
   # Optional Traefik middlewares applied to both routes (IngressRoute mode),
   # e.g. rate limiting / WAF chains that already exist in the cluster.
   middlewares: []
+  # Namespace where Traefik runs (ingress NetworkPolicy peer)
+  traefikNamespace: traefik
 
 # Scheduled wipe of the contacts table - enable on publicly exposed demo
 # instances so junk never accumulates.
@@ -21,6 +23,11 @@ demoReset:
 monitoring:
   enabled: false # requires kube-prometheus-stack (see README)
   release: prometheus
+  namespace: monitoring # namespace where Prometheus runs (NetworkPolicy peer)
+
+# Default-deny + allowlist NetworkPolicies (needs a policy-enforcing CNI).
+networkPolicy:
+  enabled: true
 
 backend:
   image: ghcr.io/alexbeav/devops-phonebook-demo/backend

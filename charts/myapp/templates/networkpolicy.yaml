@@ -1,8 +1,153 @@
+{{- if .Values.networkPolicy.enabled }}
+# Default-deny + explicit allowlist for every phonebook pod (app pods AND the
+# PostgreSQL StatefulSet, which carries the part-of label via
+# postgresql.primary.podLabels). Requires a NetworkPolicy-enforcing CNI
+# (Cilium in the homelab). The app's only legitimate traffic is in-cluster:
+# DNS, backend<->postgres, frontend->backend, Traefik/Prometheus ingress.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: myapp-default-deny
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: devops-phonebook-demo
+  policyTypes:
+    - Ingress
+    - Egress
+---
+# Every selected pod may resolve DNS (UDP+TCP 53) against kube-dns only.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: myapp-allow-dns
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: devops-phonebook-demo
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+# Backend (and the reset job) may reach PostgreSQL; PostgreSQL accepts them.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: myapp-backend-egress
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values: [myapp-backend, myapp-demo-reset]
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: postgresql
+              app.kubernetes.io/instance: {{ .Release.Name }}
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+# Frontend may reach the backend API.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: myapp-frontend-egress
+spec:
+  podSelector:
+    matchLabels:
+      app: myapp-frontend
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: myapp-backend
+      ports:
+        - protocol: TCP
+          port: 5000
+---
+# Ingress to the app: Traefik reaches frontend + backend; frontend reaches
+# backend; Prometheus scrapes backend /metrics.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: myapp-frontend-ingress
+spec:
+  podSelector:
+    matchLabels:
+      app: myapp-frontend
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Values.ingress.traefikNamespace }}
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - protocol: TCP
+          port: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: myapp-backend-ingress
+spec:
+  podSelector:
+    matchLabels:
+      app: myapp-backend
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Values.ingress.traefikNamespace }}
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+        - podSelector:
+            matchLabels:
+              app: myapp-frontend
+      ports:
+        - protocol: TCP
+          port: 5000
+    {{- if .Values.monitoring.enabled }}
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Values.monitoring.namespace }}
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus
+      ports:
+        - protocol: TCP
+          port: 5000
+    {{- end }}
+{{- end }}
 {{- if .Values.postgresql.enabled }}
-# Single authoritative policy for PostgreSQL access. The Bitnami subchart's
-# own NetworkPolicy is disabled in values (primary.networkPolicy.enabled=false)
-# because policies are additive - its permissive allowExternal default would
-# override this one.
+# PostgreSQL ingress: only the backend, reset job, and (in prod) the Prometheus
+# exporter scrape. Egress for PostgreSQL is DNS-only via myapp-allow-dns above.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -11,31 +156,24 @@ spec:
   podSelector:
     matchLabels:
       app.kubernetes.io/name: postgresql
-      # Bitnami labels pods with the Helm release name, not fullnameOverride
       app.kubernetes.io/instance: {{ .Release.Name }}
   policyTypes:
     - Ingress
   ingress:
     - from:
         - podSelector:
-            matchLabels:
-              app: myapp-backend
-        {{- if .Values.demoReset.enabled }}
-        # the scheduled demo-reset job also needs the database
-        - podSelector:
-            matchLabels:
-              app: myapp-demo-reset
-        {{- end }}
+            matchExpressions:
+              - key: app
+                operator: In
+                values: [myapp-backend, myapp-demo-reset]
       ports:
         - protocol: TCP
           port: 5432
     {{- if .Values.monitoring.enabled }}
-    # The postgres exporter is a sidecar in the PostgreSQL pod this policy
-    # selects; without this rule kube-prometheus-stack could not scrape it.
     - from:
         - namespaceSelector:
             matchLabels:
-              kubernetes.io/metadata.name: monitoring
+              kubernetes.io/metadata.name: {{ .Values.monitoring.namespace }}
           podSelector:
             matchLabels:
               app.kubernetes.io/name: prometheus

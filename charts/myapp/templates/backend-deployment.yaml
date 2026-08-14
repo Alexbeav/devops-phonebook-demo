@@ -17,9 +17,25 @@ spec:
         app: myapp-backend
         app.kubernetes.io/part-of: devops-phonebook-demo
     spec:
+      # App needs no Kubernetes API access.
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       initContainers:
         - name: wait-for-postgres
           image: postgres:16
+          # postgres image defaults to root; pin the postgres uid so it
+          # satisfies runAsNonRoot. pg_isready needs no elevated rights.
+          securityContext:
+            runAsUser: 999
+            runAsGroup: 999
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
           command:
             - sh
             - -c
@@ -48,6 +64,12 @@ spec:
           image: {{ .Values.backend.image }}:{{ .Values.backend.tag }}
           # node directly - the runtime image ships without the npm CLI
           command: ["node", "migrate.js"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
           resources:
             requests:
               cpu: 25m
@@ -72,6 +94,12 @@ spec:
       containers:
         - name: backend
           image: {{ .Values.backend.image }}:{{ .Values.backend.tag }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
           ports:
             - name: http
               containerPort: 5000
