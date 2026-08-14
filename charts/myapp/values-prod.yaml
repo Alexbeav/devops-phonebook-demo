@@ -14,7 +14,6 @@ ingress:
       namespace: traefik
     - name: security-headers
       namespace: traefik
-
 # Public demo instance: nightly contacts wipe (04:00 cluster time)
 demoReset:
   enabled: true
@@ -38,7 +37,7 @@ backend:
       memory: 256Mi
 frontend:
   image: ghcr.io/alexbeav/devops-phonebook-demo/frontend
-  tag: "d89db10"
+  tag: "c3bb89d"
   replicaCount: 3
   service:
     type: ClusterIP # Traefik fronts the app; no direct LoadBalancer exposure
