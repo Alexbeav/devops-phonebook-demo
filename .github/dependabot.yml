@@ -1,0 +1,35 @@
+# Version-update PRs are deliberately not build-blocking (see README rationale)
+# - vulnerability alerts and security updates are separate repository settings.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /apps/backend
+    schedule:
+      interval: weekly
+  - package-ecosystem: npm
+    directory: /apps/frontend
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker
+    directory: /apps/backend
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker
+    directory: /apps/frontend
+    schedule:
+      interval: weekly
+  # Covers image references in the chart manifests (e.g. the postgres:16
+  # initContainer pin in backend-deployment.yaml).
+  - package-ecosystem: docker
+    directory: /charts/myapp
+    schedule:
+      interval: weekly
+  # Chart.yaml / Chart.lock dependency maintenance (Bitnami PostgreSQL).
+  - package-ecosystem: helm
+    directory: /charts/myapp
+    schedule:
+      interval: weekly

@@ -62,17 +62,21 @@ jobs:
           echo "frontend=$frontend" >> "$GITHUB_OUTPUT"
           echo "Detected changes: backend=$backend frontend=$frontend"
 
-      # Tests gate everything downstream - no '|| true'.
-      - name: Backend tests
+      # Tests gate everything downstream - no '|| true'. The audit gate is
+      # scoped to production dependencies: dev-chain advisories don't block,
+      # runtime dependencies do (Trivy covers the built image layers).
+      - name: Backend tests + audit
         working-directory: apps/backend
         run: |
           npm ci
+          npm audit --omit=dev --audit-level=high
           npm test
 
-      - name: Frontend tests
+      - name: Frontend tests + audit
         working-directory: apps/frontend
         run: |
           npm ci
+          npm audit --omit=dev --audit-level=high
           npm test
 
       - name: Build backend image

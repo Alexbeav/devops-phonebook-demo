@@ -1,0 +1,8 @@
+# Audited findings, suppressed by exact fingerprint only (commit:file:rule:line).
+#
+# Both entries are the same historical docs commit (2451bf04, SealedSecrets
+# how-to): a JSON example of a decoded Secret using illustrative placeholder
+# values - the base64 decodes to "prodUser01" / "prodPass456@". Never a real
+# credential; the example was later rewritten to use <your-...> placeholders.
+2451bf049f000df34b33e3b29334065fe7261358:QUICKSTART.md:generic-api-key:61
+2451bf049f000df34b33e3b29334065fe7261358:README.md:generic-api-key:188
