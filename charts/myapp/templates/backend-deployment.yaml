@@ -21,6 +21,9 @@ spec:
       automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
+        # Numeric uid required: the image's `USER node` is non-numeric, which
+        # the kubelet cannot verify against runAsNonRoot. node = uid 1000.
+        runAsUser: 1000
         seccompProfile:
           type: RuntimeDefault
       initContainers:
