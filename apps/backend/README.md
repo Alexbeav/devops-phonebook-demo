@@ -19,3 +19,11 @@ npm start
 The app is built as a factory (`createApp(pool)` in `app.js`) so tests inject a
 fake pool; `index.js` is the runtime entrypoint that wires the real pg pool
 from environment variables (see `.env.example`).
+
+## Image provenance
+
+Every pushed image carries signed SLSA provenance and an SBOM attestation:
+
+```sh
+gh attestation verify oci://ghcr.io/alexbeav/devops-phonebook-demo/backend:<tag> --owner Alexbeav
+```
