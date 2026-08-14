@@ -47,6 +47,14 @@ frontend:
 postgresql:
   enabled: true
   fullnameOverride: myapp-postgresql
+  # Required by Bitnami's image-substitution guard when using the bitnamilegacy
+  # mirror (their own archive registry) - see bitnami/charts#30850.
+  global:
+    security:
+      allowInsecureImages: true
+  # Versioned bitnami tags moved to the bitnamilegacy mirror (2025 catalog change)
+  image:
+    repository: bitnamilegacy/postgresql
   auth:
     username: myappuser
     password: myapppassword

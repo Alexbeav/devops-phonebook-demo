@@ -47,6 +47,15 @@ frontend:
 postgresql:
   enabled: true
   fullnameOverride: myapp-postgresql
+  # Required by Bitnami's image-substitution guard when using the bitnamilegacy
+  # mirror (their own archive registry) - see bitnami/charts#30850.
+  global:
+    security:
+      allowInsecureImages: true
+  # Bitnami removed versioned tags from docker.io/bitnami in 2025; the pinned
+  # chart's default image now only exists under the bitnamilegacy mirror.
+  image:
+    repository: bitnamilegacy/postgresql
   auth:
     username: myappuser
     # Inline password is for local/demo installs only; production overlays it
