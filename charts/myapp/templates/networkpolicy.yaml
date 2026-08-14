@@ -146,6 +146,7 @@ spec:
     {{- end }}
 {{- end }}
 {{- if .Values.postgresql.enabled }}
+---
 # PostgreSQL ingress: only the backend, reset job, and (in prod) the Prometheus
 # exporter scrape. Egress for PostgreSQL is DNS-only via myapp-allow-dns above.
 apiVersion: networking.k8s.io/v1
