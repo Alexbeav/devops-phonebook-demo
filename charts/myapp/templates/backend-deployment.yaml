@@ -34,7 +34,8 @@ spec:
               value: "5432"
         - name: run-migrations
           image: {{ .Values.backend.image }}:{{ .Values.backend.tag }}
-          command: ["npm", "run", "migrate"]
+          # node directly - the runtime image ships without the npm CLI
+          command: ["node", "migrate.js"]
           env:
             - name: DB_HOST
               value: {{ .Values.postgresql.fullnameOverride | quote }}
