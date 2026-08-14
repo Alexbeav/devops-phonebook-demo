@@ -74,6 +74,7 @@ jobs:
 
           test "$entrypoints" = "websecure,websecure-cf"
           echo "$middlewares" | grep -Eq '(^|,)body-limit-phonebook(,|$)'
+          echo "$middlewares" | grep -Eq '(^|,)crowdsec-bouncer-cloudflare(,|$)'
           echo "$middlewares" | grep -Eq '(^|,)rate-limit-phonebook(,|$)'
 
   build-and-scan:
