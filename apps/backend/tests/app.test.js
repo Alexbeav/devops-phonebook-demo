@@ -31,6 +31,15 @@ test('GET /api/config reports deployment mode', async () => {
     assert.equal(pool.calls.length, 0);
 });
 
+test('contact API has an application-layer request ceiling', async () => {
+    const pool = fakePool(async () => ({ rows: [contact], rowCount: 1 }));
+    const app = createApp(pool, { contactRateLimit: 2 });
+    assert.equal((await request(app).get('/api/contacts')).status, 200);
+    assert.equal((await request(app).get('/api/contacts')).status, 200);
+    assert.equal((await request(app).get('/api/contacts')).status, 429);
+    assert.equal(pool.calls.length, 2);
+});
+
 test('GET /api/contacts/:id returns 404 when missing', async () => {
     const pool = fakePool(async () => ({ rows: [], rowCount: 0 }));
     const res = await request(createApp(pool)).get('/api/contacts/99');

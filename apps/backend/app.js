@@ -1,8 +1,9 @@
 import express from 'express';
+import { rateLimit } from 'express-rate-limit';
 import client from 'prom-client';
 
 // App factory with an injectable pg pool so tests can supply a fake.
-export function createApp(pool, { readOnly = false } = {}) {
+export function createApp(pool, { readOnly = false, contactRateLimit = 600 } = {}) {
     const app = express();
 
     // Production is a public CI/CD showcase, not a public data-entry service.
@@ -15,6 +16,17 @@ export function createApp(pool, { readOnly = false } = {}) {
         }
         next();
     });
+
+    // This is a backstop at the service hop, so it deliberately keys on the
+    // directly connected Traefik proxy rather than trusting client-supplied
+    // forwarding headers. Per-client enforcement remains at the edge.
+    app.use('/api/contacts', rateLimit({
+        windowMs: 60_000,
+        limit: contactRateLimit,
+        standardHeaders: 'draft-7',
+        legacyHeaders: false,
+        validate: { xForwardedForHeader: false },
+    }));
 
     app.use(express.json({ limit: '8kb', strict: true }));
 

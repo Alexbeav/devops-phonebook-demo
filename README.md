@@ -272,6 +272,9 @@ kubectl get secret myapp-db-credentials -n myapp-prod -o jsonpath='{.data}' | py
 - The public production API permits contact reads only. `POST`, `PUT`, `PATCH`,
   and `DELETE` receive `405 Method Not Allowed` from the backend. Development
   remains writable through `backend.readOnly: false`.
+- Contact routes also have an application-layer request ceiling. Cloudflare and
+  Traefik provide the per-client edge limits; the backend limit is a final
+  aggregate safety ceiling and does not trust forwarded client-IP headers.
 
 ---
 
