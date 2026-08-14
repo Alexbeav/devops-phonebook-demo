@@ -1,4 +1,7 @@
 nameOverride: myapp-dev
+
+# Canary for the gVisor sandbox. Prod stays on runc until this has soaked.
+runtimeClassName: gvisor
 # Dev and prod isolate by NAMESPACE (myapp-dev / myapp-prod), not by resource
 # names - workload names are fixed (myapp-backend etc.). Deploy with Helm
 # release name 'myapp-dev' so the Bitnami subchart labels line up.

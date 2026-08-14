@@ -3,6 +3,11 @@
 # and are the files CI keeps up to date with pinned image SHAs.
 nameOverride: myapp
 
+# Sandboxed container runtime. Empty = runc (default). Set to 'gvisor' where a
+# RuntimeClass of that name exists on the cluster. Do NOT set this for the
+# PostgreSQL subchart - gVisor's syscall cost lands hardest on databases.
+runtimeClassName: ""
+
 ingress:
   host: myapp.local
   useIngressRoute: false # true switches to Traefik IngressRoute (also served by cert-manager)
