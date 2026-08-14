@@ -11,6 +11,9 @@ runtimeClassName: ""
 ingress:
   host: myapp.local
   useIngressRoute: false # true switches to Traefik IngressRoute (also served by cert-manager)
+  entryPoints:
+    - web
+    - websecure
   tls:
     enabled: false # requires cert-manager + a 'letsencrypt-prod' ClusterIssuer (see README)
   # Optional Traefik middlewares applied to both routes (IngressRoute mode),

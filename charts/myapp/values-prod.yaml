@@ -5,12 +5,19 @@ ingress:
   # Ingress support); TLS comes from the cert-manager Certificate the chart
   # creates (letsencrypt-prod, DNS-01).
   useIngressRoute: true
+  # Keep the current path during the staged migration. Cloudflare Tunnel will
+  # move to websecure-cf only after this route is healthy on both entrypoints.
+  entryPoints:
+    - websecure
+    - websecure-cf
   tls:
     enabled: true
   middlewares:
     - name: crowdsec-bouncer
       namespace: traefik
-    - name: rate-limit
+    - name: rate-limit-phonebook
+      namespace: traefik
+    - name: body-limit-phonebook
       namespace: traefik
     - name: security-headers
       namespace: traefik
