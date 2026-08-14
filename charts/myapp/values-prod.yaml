@@ -9,7 +9,7 @@ monitoring:
   release: prometheus
 backend:
   image: ghcr.io/alexbeav/devops-phonebook-demo/backend
-  tag: "d89db10"
+  tag: "98a8457"
   replicaCount: 3
   service:
     type: ClusterIP
