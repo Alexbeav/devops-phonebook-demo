@@ -1,0 +1,33 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-probes
+  annotations:
+    policies.kyverno.io/description: >-
+      Long-running containers in this app's Deployments must define liveness
+      and readiness probes (periodSeconds > 0 proves the probe is actually
+      configured, not an empty stub). initContainers are exempt by nature.
+spec:
+  background: true
+  rules:
+    - name: require-liveness-readiness
+      match:
+        any:
+          - resources:
+              kinds:
+                - Deployment
+              selector:
+                matchLabels:
+                  app.kubernetes.io/part-of: devops-phonebook-demo
+      validate:
+        failureAction: Enforce
+        message: "All containers must define liveness and readiness probes."
+        pattern:
+          spec:
+            template:
+              spec:
+                containers:
+                  - livenessProbe:
+                      periodSeconds: ">0"
+                    readinessProbe:
+                      periodSeconds: ">0"

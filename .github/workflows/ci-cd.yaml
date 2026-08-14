@@ -14,6 +14,43 @@ on:
     branches: [ main ]
 
 jobs:
+  # Blocking CI validation: rendered manifests for both environments must
+  # satisfy the Kyverno policies in policies/, and the policies must prove
+  # they can block violations (negative-fixture self-tests). Upgrading this
+  # to a required branch check is a documented opt-in (see TODO.md).
+  policy-gate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install kyverno CLI 1.18.2 (checksum-verified)
+        run: |
+          set -euo pipefail
+          curl -fsSL -o kyverno.tar.gz \
+            "https://github.com/kyverno/kyverno/releases/download/v1.18.2/kyverno-cli_v1.18.2_linux_x86_64.tar.gz"
+          echo "cb2feb8356149fd2fe774c894ccf0969f4a60a83867dd913af724f74ffbbc18b  kyverno.tar.gz" | sha256sum -c -
+          tar -xzf kyverno.tar.gz kyverno
+          ./kyverno version
+
+      - name: Policy self-tests (negative fixtures + no-match safeguard)
+        run: ./kyverno test policies/
+
+      - name: Validate rendered dev manifests
+        run: |
+          set -euo pipefail
+          helm template myapp-dev charts/myapp -f charts/myapp/values-dev.yaml > /tmp/dev-render.yaml
+          ./kyverno apply policies/require-resources.yaml policies/require-probes.yaml policies/disallow-latest-tag.yaml \
+            --resource /tmp/dev-render.yaml
+
+      - name: Validate rendered prod manifests
+        run: |
+          set -euo pipefail
+          helm template myapp-prod charts/myapp -f charts/myapp/values-prod.yaml > /tmp/prod-render.yaml
+          ./kyverno apply policies/require-resources.yaml policies/require-probes.yaml policies/disallow-latest-tag.yaml \
+            --resource /tmp/prod-render.yaml
+
   build-and-scan:
     runs-on: ubuntu-latest
     permissions:

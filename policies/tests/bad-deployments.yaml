@@ -1,0 +1,77 @@
+# Negative fixtures: each carries the part-of label (so the policies match)
+# and violates exactly one policy. If any of these stops failing, the gate has
+# silently gone soft.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bad-missing-resources
+  labels:
+    app.kubernetes.io/part-of: devops-phonebook-demo
+spec:
+  selector:
+    matchLabels:
+      app: bad-missing-resources
+  template:
+    metadata:
+      labels:
+        app: bad-missing-resources
+    spec:
+      containers:
+        - name: app
+          image: example.com/app:1.0.0
+          livenessProbe:
+            httpGet: { path: /healthz, port: 8080 }
+            periodSeconds: 10
+          readinessProbe:
+            httpGet: { path: /ready, port: 8080 }
+            periodSeconds: 10
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bad-missing-probes
+  labels:
+    app.kubernetes.io/part-of: devops-phonebook-demo
+spec:
+  selector:
+    matchLabels:
+      app: bad-missing-probes
+  template:
+    metadata:
+      labels:
+        app: bad-missing-probes
+    spec:
+      containers:
+        - name: app
+          image: example.com/app:1.0.0
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { cpu: 100m, memory: 128Mi }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bad-latest-tag
+  labels:
+    app.kubernetes.io/part-of: devops-phonebook-demo
+spec:
+  selector:
+    matchLabels:
+      app: bad-latest-tag
+  template:
+    metadata:
+      labels:
+        app: bad-latest-tag
+    spec:
+      containers:
+        - name: app
+          image: example.com/app:latest
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { cpu: 100m, memory: 128Mi }
+          livenessProbe:
+            httpGet: { path: /healthz, port: 8080 }
+            periodSeconds: 10
+          readinessProbe:
+            httpGet: { path: /ready, port: 8080 }
+            periodSeconds: 10

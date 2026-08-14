@@ -1,0 +1,76 @@
+apiVersion: cli.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: phonebook-policy-tests
+policies:
+  - ../require-resources.yaml
+  - ../require-probes.yaml
+  - ../disallow-latest-tag.yaml
+resources:
+  - bad-deployments.yaml
+  - good-deployment.yaml
+  - unlabeled-deployment.yaml
+results:
+  # Negative fixtures must FAIL - proves the policies actually block.
+  - policy: require-resources
+    rule: require-requests-limits
+    kind: Deployment
+    resources:
+      - bad-missing-resources
+    result: fail
+  - policy: require-probes
+    rule: require-liveness-readiness
+    kind: Deployment
+    resources:
+      - bad-missing-probes
+    result: fail
+  - policy: disallow-latest-tag
+    rule: disallow-latest
+    kind: Deployment
+    resources:
+      - bad-latest-tag
+    result: fail
+  # Compliant fixture must PASS on every rule.
+  - policy: require-resources
+    rule: require-requests-limits
+    kind: Deployment
+    resources:
+      - good-app
+    result: pass
+  - policy: require-probes
+    rule: require-liveness-readiness
+    kind: Deployment
+    resources:
+      - good-app
+    result: pass
+  - policy: disallow-latest-tag
+    rule: disallow-latest
+    kind: Deployment
+    resources:
+      - good-app
+    result: pass
+  - policy: disallow-latest-tag
+    rule: require-image-tag
+    kind: Deployment
+    resources:
+      - good-app
+    result: pass
+  # No-match safeguard: unlabeled resource is skipped, never blocked.
+  - policy: require-resources
+    rule: require-requests-limits
+    kind: Deployment
+    resources:
+      - unrelated-app
+    result: skip
+  - policy: require-probes
+    rule: require-liveness-readiness
+    kind: Deployment
+    resources:
+      - unrelated-app
+    result: skip
+  - policy: disallow-latest-tag
+    rule: disallow-latest
+    kind: Deployment
+    resources:
+      - unrelated-app
+    result: skip

@@ -1,0 +1,44 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-resources
+  annotations:
+    policies.kyverno.io/description: >-
+      All containers and initContainers in this app's Deployments must declare
+      CPU/memory requests and limits. Scoped by the part-of label so an
+      in-cluster install can never affect unrelated workloads.
+spec:
+  background: true
+  rules:
+    - name: require-requests-limits
+      match:
+        any:
+          - resources:
+              kinds:
+                - Deployment
+              selector:
+                matchLabels:
+                  app.kubernetes.io/part-of: devops-phonebook-demo
+      validate:
+        failureAction: Enforce
+        message: "All containers and initContainers must set CPU and memory requests and limits."
+        pattern:
+          spec:
+            template:
+              spec:
+                containers:
+                  - resources:
+                      requests:
+                        cpu: "?*"
+                        memory: "?*"
+                      limits:
+                        cpu: "?*"
+                        memory: "?*"
+                =(initContainers):
+                  - resources:
+                      requests:
+                        cpu: "?*"
+                        memory: "?*"
+                      limits:
+                        cpu: "?*"
+                        memory: "?*"

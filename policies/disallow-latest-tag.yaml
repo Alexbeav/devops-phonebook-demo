@@ -1,0 +1,53 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-latest-tag
+  annotations:
+    policies.kyverno.io/description: >-
+      Images in this app's Deployments must use an explicit, immutable tag:
+      a tag must be present and must not be 'latest'. The env overlays pin
+      commit SHAs; the bare values.yaml default ('latest' placeholder) is
+      documented as outside the enforced scope.
+spec:
+  background: true
+  rules:
+    - name: require-image-tag
+      match:
+        any:
+          - resources:
+              kinds:
+                - Deployment
+              selector:
+                matchLabels:
+                  app.kubernetes.io/part-of: devops-phonebook-demo
+      validate:
+        failureAction: Enforce
+        message: "Images must specify an explicit tag."
+        pattern:
+          spec:
+            template:
+              spec:
+                containers:
+                  - image: "*:*"
+                =(initContainers):
+                  - image: "*:*"
+    - name: disallow-latest
+      match:
+        any:
+          - resources:
+              kinds:
+                - Deployment
+              selector:
+                matchLabels:
+                  app.kubernetes.io/part-of: devops-phonebook-demo
+      validate:
+        failureAction: Enforce
+        message: "Using the mutable 'latest' tag is not allowed."
+        pattern:
+          spec:
+            template:
+              spec:
+                containers:
+                  - image: "!*:latest"
+                =(initContainers):
+                  - image: "!*:latest"

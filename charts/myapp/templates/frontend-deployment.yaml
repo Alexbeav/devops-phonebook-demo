@@ -2,6 +2,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: myapp-frontend
+  labels:
+    app: myapp-frontend
+    # Kyverno policies in policies/ scope on this label
+    app.kubernetes.io/part-of: devops-phonebook-demo
 spec:
   replicas: {{ .Values.frontend.replicaCount }}
   selector:
@@ -11,6 +15,7 @@ spec:
     metadata:
       labels:
         app: myapp-frontend
+        app.kubernetes.io/part-of: devops-phonebook-demo
     spec:
       containers:
         - name: frontend

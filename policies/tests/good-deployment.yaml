@@ -1,0 +1,34 @@
+# Fully compliant fixture, including an initContainer with resources.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: good-app
+  labels:
+    app.kubernetes.io/part-of: devops-phonebook-demo
+spec:
+  selector:
+    matchLabels:
+      app: good-app
+  template:
+    metadata:
+      labels:
+        app: good-app
+    spec:
+      initContainers:
+        - name: init
+          image: example.com/init:1.0.0
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { cpu: 100m, memory: 128Mi }
+      containers:
+        - name: app
+          image: example.com/app:1.0.0
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { cpu: 100m, memory: 128Mi }
+          livenessProbe:
+            httpGet: { path: /healthz, port: 8080 }
+            periodSeconds: 10
+          readinessProbe:
+            httpGet: { path: /ready, port: 8080 }
+            periodSeconds: 10

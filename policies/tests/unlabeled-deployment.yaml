@@ -1,0 +1,19 @@
+# No-match safeguard: violates every policy but does NOT carry the part-of
+# label, so all policies must skip it. Proves the gate cannot leak onto
+# unrelated workloads if these policies are ever installed in a cluster.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: unrelated-app
+spec:
+  selector:
+    matchLabels:
+      app: unrelated-app
+  template:
+    metadata:
+      labels:
+        app: unrelated-app
+    spec:
+      containers:
+        - name: app
+          image: example.com/app:latest

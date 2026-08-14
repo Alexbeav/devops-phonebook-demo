@@ -2,6 +2,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: myapp-backend
+  labels:
+    app: myapp-backend
+    # Kyverno policies in policies/ scope on this label
+    app.kubernetes.io/part-of: devops-phonebook-demo
 spec:
   replicas: {{ .Values.backend.replicaCount }}
   selector:
@@ -11,6 +15,7 @@ spec:
     metadata:
       labels:
         app: myapp-backend
+        app.kubernetes.io/part-of: devops-phonebook-demo
     spec:
       initContainers:
         - name: wait-for-postgres
@@ -23,6 +28,13 @@ spec:
                 echo "Waiting for PostgreSQL..."
                 sleep 2
               done
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
           env:
             - name: DB_HOST
               value: {{ .Values.postgresql.fullnameOverride | quote }}
@@ -36,6 +48,13 @@ spec:
           image: {{ .Values.backend.image }}:{{ .Values.backend.tag }}
           # node directly - the runtime image ships without the npm CLI
           command: ["node", "migrate.js"]
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
           env:
             - name: DB_HOST
               value: {{ .Values.postgresql.fullnameOverride | quote }}
