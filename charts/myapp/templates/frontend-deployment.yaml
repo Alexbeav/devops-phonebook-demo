@@ -18,6 +18,12 @@ spec:
         app.kubernetes.io/part-of: devops-phonebook-demo
     spec:
       # App needs no Kubernetes API access.
+      {{- with .Values.runtimeClassName }}
+      # Sandboxed runtime (gVisor). This app is internet-facing and
+      # unauthenticated by design, so it runs on a userspace kernel rather
+      # than sharing the host's. Unset = normal runc.
+      runtimeClassName: {{ . }}
+      {{- end }}
       automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
