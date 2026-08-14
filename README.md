@@ -1,5 +1,12 @@
 # DevOps CI/CD + GitOps Pipeline Demo: Phone Book App
 
+**🌐 Live demo: [phonebook.crosstalkis.com](https://phonebook.crosstalkis.com)** — this
+exact repo, GitOps-deployed by ArgoCD to a self-hosted Kubernetes cluster, served
+through Cloudflare + Traefik (CrowdSec, rate limiting, security headers). It's an
+open demo: add and delete contacts freely — **data resets nightly, don't enter real
+information**. Image provenance is publicly verifiable:
+`gh attestation verify oci://ghcr.io/alexbeav/devops-phonebook-demo/backend:<tag> --owner Alexbeav`
+
 ![brave_aIIBfqkOBE](https://github.com/user-attachments/assets/789c8001-dfbd-4497-877b-3b3e5ab950e3)
 
 

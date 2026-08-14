@@ -7,6 +7,18 @@ ingress:
   useIngressRoute: true
   tls:
     enabled: true
+  middlewares:
+    - name: crowdsec-bouncer
+      namespace: traefik
+    - name: rate-limit
+      namespace: traefik
+    - name: security-headers
+      namespace: traefik
+
+# Public demo instance: nightly contacts wipe (04:00 cluster time)
+demoReset:
+  enabled: true
+  schedule: "0 4 * * *"
 monitoring:
   enabled: true
   release: prometheus

@@ -1,0 +1,51 @@
+{{- if .Values.demoReset.enabled }}
+# Public demo hygiene: wipes user-submitted contacts on a schedule so the
+# exposed instance stays fresh and junk never accumulates.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: myapp-demo-reset
+  labels:
+    app: myapp-demo-reset
+    app.kubernetes.io/part-of: devops-phonebook-demo
+spec:
+  schedule: {{ .Values.demoReset.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app: myapp-demo-reset
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: reset
+              image: postgres:16
+              command:
+                - psql
+                - -c
+                - TRUNCATE contacts RESTART IDENTITY
+              env:
+                - name: PGHOST
+                  value: {{ .Values.postgresql.fullnameOverride | quote }}
+                - name: PGUSER
+                  value: {{ .Values.postgresql.auth.username | quote }}
+                - name: PGDATABASE
+                  value: {{ .Values.postgresql.auth.database | quote }}
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.postgresql.auth.existingSecret | default .Values.postgresql.fullnameOverride }}
+                      key: password
+              resources:
+                requests:
+                  cpu: 25m
+                  memory: 32Mi
+                limits:
+                  cpu: 100m
+                  memory: 64Mi
+{{- end }}
