@@ -41,6 +41,11 @@ backend:
   # The application rejects POST/PUT/PATCH/DELETE when true. Keep local/dev
   # writable; production overrides this to true.
   readOnly: false
+  # Runtime database identity. Empty values fall back to the PostgreSQL app
+  # user and secret, which keeps local and development installs simple.
+  databaseUser: ""
+  databaseSecret: ""
+  databasePasswordKey: password
   replicaCount: 1
   service:
     type: ClusterIP
