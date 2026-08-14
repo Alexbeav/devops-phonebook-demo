@@ -311,6 +311,33 @@ There is intentionally **no** "update to latest" cron: CI pins exact image SHAs
 into the values files on every successful build, so a scheduled updater would
 only introduce untracked drift.
 
+## 🧾 Controls & Evidence
+
+Each control names where it is enforced, what evidence it produces (with real
+retention — nothing here claims to be permanent), and which regulatory theme
+that evidence supports. Wording is deliberate: these controls *support
+evidence for* obligations; they do not make anything "compliant" by themselves.
+
+| Control | Enforced where | Evidence (retention) | Supports evidence for |
+|---------|---------------|----------------------|----------------------|
+| Vulnerability scan gates image publication | CI: Trivy runs between build and push; CRITICAL/HIGH fails the job | Workflow run logs | CRA Annex I vulnerability handling |
+| Per-build SBOM (CycloneDX) | CI: generated for every build, PR and push | Workflow artifact, 90 days; SBOM attestation on the image (hosted by GitHub, owner-deletable) | CRA Annex I Part II (machine-readable SBOM) |
+| Signed SLSA build provenance | CI: `actions/attest` on every pushed image, OCI-discoverable | GitHub attestations — verify with `gh attestation verify oci://ghcr.io/alexbeav/devops-phonebook-demo/backend:<tag> --owner Alexbeav` | NIS2 Art. 21 supply-chain security |
+| Policy-as-code gate (incl. negative self-tests) | CI: `policy-gate` job — Kyverno validates both env renders; fixtures prove the policies block violations | Job logs + `policies/` in git history | NIS2 Art. 21 change control |
+| Prod changes via pull request | CI writes prod image tags only through the `ci/tag-update` PR | PR history on `main` | NIS2 Art. 21 change control |
+| Secret scanning (full history) | CI: pinned, checksum-verified gitleaks with known-positive self-test; findings suppressed only by audited fingerprint | Workflow run logs + `.gitleaksignore` justifications | NIS2 Art. 21 access control / hygiene |
+| SAST | CI: CodeQL on main, dev, PRs, weekly | Repository Security tab | CRA secure-development practices |
+| Dependency monitoring | Dependabot: version-update PRs (npm/actions/docker/helm) — *plus* repository-level vulnerability alerts and security updates, which are separate settings (both enabled) | Dependabot PRs and alerts | CRA Annex I vulnerability handling |
+| Production-dependency audit gate | CI: `npm audit --omit=dev --audit-level=high` per app | Workflow run logs | CRA Annex I vulnerability handling |
+| Supply-chain pinning | All third-party actions pinned to commit SHAs; CLI downloads checksum-verified; subchart vendored + locked | Git history / workflow files | NIS2 Art. 21 supply-chain security |
+| Rollback capability | `workflow_dispatch` with SHA-validated inputs, GHCR tag verification, branch-mapped GitOps commit | Workflow definition + run history. **Capability, not yet exercised** — a live rollback drill is in TODO | NIS2 Art. 21 incident handling / recovery |
+| Incident runbooks | `docs/runbooks/` linked from every alert | Git history | NIS2 Art. 21 incident handling |
+
+Dependabot PRs are deliberately **not** build-blocking: the Trivy gate blocks
+vulnerable runtime images, and the npm audit gate blocks vulnerable production
+dependencies — build-time/dev-chain advisories arrive as PRs and alerts
+instead of holding the pipeline red.
+
 ## ✅ What This Demonstrates
 
 ### DevOps Best Practices
