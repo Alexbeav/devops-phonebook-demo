@@ -24,7 +24,7 @@ monitoring:
   release: prometheus
 backend:
   image: ghcr.io/alexbeav/devops-phonebook-demo/backend
-  tag: "98a8457"
+  tag: "8731336"
   readOnly: true
   replicaCount: 3
   service:
@@ -39,7 +39,7 @@ backend:
       memory: 256Mi
 frontend:
   image: ghcr.io/alexbeav/devops-phonebook-demo/frontend
-  tag: "304ea25"
+  tag: "8731336"
   replicaCount: 3
   service:
     type: ClusterIP # Traefik fronts the app; no direct LoadBalancer exposure
