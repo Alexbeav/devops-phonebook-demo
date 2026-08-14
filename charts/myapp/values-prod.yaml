@@ -13,7 +13,7 @@ ingress:
   tls:
     enabled: true
   middlewares:
-    - name: crowdsec-bouncer
+    - name: crowdsec-bouncer-cloudflare
       namespace: traefik
     - name: rate-limit-phonebook
       namespace: traefik
