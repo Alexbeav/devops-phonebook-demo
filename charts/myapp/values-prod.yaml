@@ -19,6 +19,8 @@ ingress:
       namespace: traefik
     - name: body-limit-phonebook
       namespace: traefik
+    - name: csp-phonebook
+      namespace: traefik
     - name: security-headers
       namespace: traefik
 # Public demo instance: application-enforced read-only mode plus a nightly
