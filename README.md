@@ -161,7 +161,6 @@ fresh checkout deploys without any dependency step:
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 helm install prometheus prometheus-community/kube-prometheus-stack \
   --version 88.3.0 --namespace monitoring --create-namespace
-kubectl apply -f manifests/prometheus-alerts.yaml
 ```
 
 The release name `prometheus` and namespace `monitoring` matter: the chart's
@@ -260,9 +259,9 @@ CREATE TABLE contacts (
 
 ## 🚨 Alert Rules
 
-Prometheus alert rules ship per environment in `manifests/prometheus-alerts.yaml`.
-Every expression is namespace-scoped and pairs its comparison with an `absent()`
-branch, so a deleted deployment or never-scraped target still fires.
+The production Helm chart installs its `PrometheusRule` when `monitoring.enabled=true`.
+The standalone `manifests/prometheus-alerts.yaml` file remains available for manual deployments.
+Each expression is namespace-scoped. An `absent()` branch detects a missing target or metric.
 
 ### Prod (critical)
 - **BackendDown / FrontendDown**: no available replicas for >1 minute (kube-state-metrics)

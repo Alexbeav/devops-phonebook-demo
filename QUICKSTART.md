@@ -82,9 +82,6 @@ git branch dev && git push origin dev
 # Apply the ArgoCD applications (Traefik + the two app environments)
 kubectl apply -f manifests/argocd-apps.yaml -f manifests/traefik.yaml
 
-# Alert rules need the kube-prometheus-stack CRDs first (see step 5)
-kubectl apply -f manifests/prometheus-alerts.yaml
-
 # Access ArgoCD UI (port-forward)
 kubectl port-forward svc/argocd-server -n argocd 8080:443
 ```
@@ -152,7 +149,7 @@ Install [cert-manager](https://cert-manager.io/docs/installation/) and create a
 - **ArgoCD UI**: `http://localhost:8080` (admin/[generated-password])
 - **Application**: `kubectl get pods -n myapp-dev`
 - **Logs**: `kubectl logs -f deployment/myapp-backend -n myapp-dev`
-- **Alerts**: Check Prometheus rules in `manifests/prometheus-alerts.yaml`
+- **Alerts**: Check the `PrometheusRule` that the production Helm release installs
 
 ## 🏢 Enterprise Features
 
@@ -167,8 +164,8 @@ This demo showcases production-ready patterns:
 
 ## 🚨 Alert Rules
 
-Per-environment `PrometheusRule` resources (see `manifests/prometheus-alerts.yaml`),
-all namespace-scoped with `absent()` companions so missing series still fire:
+The production Helm release installs a namespace-scoped `PrometheusRule`.
+The rules use `absent()` expressions so a missing metric still fires an alert.
 
 ### Prod
 - **MyAppProdBackendDown / MyAppProdFrontendDown** (critical): no available replicas >1m
