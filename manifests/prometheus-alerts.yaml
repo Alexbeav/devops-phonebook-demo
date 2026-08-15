@@ -69,8 +69,8 @@ spec:
 
     - alert: MyAppProdDatabaseDown
       expr: |
-        postgresql_up{namespace="myapp-prod"} == 0
-          or absent(postgresql_up{namespace="myapp-prod"})
+        pg_up{namespace="myapp-prod",job="myapp-postgresql-metrics"} == 0
+          or absent(pg_up{namespace="myapp-prod",job="myapp-postgresql-metrics"})
       for: 1m
       labels:
         severity: critical

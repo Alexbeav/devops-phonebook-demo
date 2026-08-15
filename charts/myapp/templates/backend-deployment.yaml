@@ -123,16 +123,18 @@ spec:
             - name: DB_HOST
               value: {{ .Values.postgresql.fullnameOverride | quote }}
             - name: DB_USER
-              value: {{ .Values.postgresql.auth.username | quote }}
+              value: {{ .Values.backend.databaseUser | default .Values.postgresql.auth.username | quote }}
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.postgresql.auth.existingSecret | default .Values.postgresql.fullnameOverride }}
-                  key: password
+                  name: {{ .Values.backend.databaseSecret | default (.Values.postgresql.auth.existingSecret | default .Values.postgresql.fullnameOverride) }}
+                  key: {{ .Values.backend.databasePasswordKey | default "password" }}
             - name: DB_NAME
               value: {{ .Values.postgresql.auth.database | quote }}
             - name: DB_PORT
               value: "5432"
+            - name: READ_ONLY
+              value: {{ .Values.backend.readOnly | quote }}
           # Startup tolerance covers the migration initContainers having just
           # finished; readiness is DB-aware, liveness is process-only.
           startupProbe:

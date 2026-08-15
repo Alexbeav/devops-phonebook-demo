@@ -1,0 +1,110 @@
+{{- if .Values.monitoring.enabled }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: myapp-alerts-prod
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: myapp
+    environment: prod
+    release: {{ .Values.monitoring.release }}
+spec:
+  groups:
+  - name: myapp-prod.rules
+    rules:
+    - alert: MyAppProdBackendDown
+      expr: |
+        kube_deployment_status_replicas_available{namespace="{{ .Release.Namespace }}",deployment="myapp-backend"} < 1
+          or absent(kube_deployment_status_replicas_available{namespace="{{ .Release.Namespace }}",deployment="myapp-backend"})
+      for: 1m
+      labels:
+        severity: critical
+        environment: prod
+        component: backend
+      annotations:
+        summary: "Prod backend has no available replicas"
+        description: "No production backend replica was available for more than one minute."
+        runbook_url: "https://github.com/Alexbeav/devops-phonebook-demo/blob/main/docs/runbooks/backend-down.md"
+    - alert: MyAppProdFrontendDown
+      expr: |
+        kube_deployment_status_replicas_available{namespace="{{ .Release.Namespace }}",deployment="myapp-frontend"} < 1
+          or absent(kube_deployment_status_replicas_available{namespace="{{ .Release.Namespace }}",deployment="myapp-frontend"})
+      for: 1m
+      labels:
+        severity: critical
+        environment: prod
+        component: frontend
+      annotations:
+        summary: "Prod frontend has no available replicas"
+        description: "No production frontend replica was available for more than one minute."
+        runbook_url: "https://github.com/Alexbeav/devops-phonebook-demo/blob/main/docs/runbooks/frontend-down.md"
+    - alert: MyAppProdBackendScrapeDown
+      expr: |
+        up{job="myapp-backend",namespace="{{ .Release.Namespace }}"} == 0
+          or absent(up{job="myapp-backend",namespace="{{ .Release.Namespace }}"})
+      for: 2m
+      labels:
+        severity: warning
+        environment: prod
+        component: backend
+      annotations:
+        summary: "Prod backend metrics scrape failed"
+        description: "Prometheus cannot scrape the production backend metrics endpoint."
+        runbook_url: "https://github.com/Alexbeav/devops-phonebook-demo/blob/main/docs/runbooks/backend-down.md"
+    - alert: MyAppProdDatabaseDown
+      expr: |
+        pg_up{namespace="{{ .Release.Namespace }}",job="myapp-postgresql-metrics"} == 0
+          or absent(pg_up{namespace="{{ .Release.Namespace }}",job="myapp-postgresql-metrics"})
+      for: 1m
+      labels:
+        severity: critical
+        environment: prod
+        component: database
+      annotations:
+        summary: "Prod PostgreSQL is down or unmonitored"
+        description: "The production PostgreSQL exporter reports a failed database connection or a missing metric."
+        runbook_url: "https://github.com/Alexbeav/devops-phonebook-demo/blob/main/docs/runbooks/database-connection.md"
+    - alert: MyAppProdHighMemoryUsage
+      expr: |
+        (
+          container_memory_working_set_bytes{namespace="{{ .Release.Namespace }}",pod=~"myapp-.*",container!="POD",container!=""}
+          /
+          container_spec_memory_limit_bytes{namespace="{{ .Release.Namespace }}",pod=~"myapp-.*",container!="POD",container!=""}
+        ) > 0.8
+      for: 5m
+      labels:
+        severity: warning
+        environment: prod
+      annotations:
+        summary: "High memory use on a production pod"
+        description: "Pod {{`{{ $labels.pod }}`}} used more than 80 percent of its memory limit for five minutes."
+        runbook_url: "https://github.com/Alexbeav/devops-phonebook-demo/blob/main/docs/runbooks/high-memory.md"
+    - alert: MyAppProdHighCPUUsage
+      expr: |
+        (
+          rate(container_cpu_usage_seconds_total{namespace="{{ .Release.Namespace }}",pod=~"myapp-.*",container!="POD",container!=""}[5m])
+          /
+          container_spec_cpu_quota{namespace="{{ .Release.Namespace }}",pod=~"myapp-.*",container!="POD",container!=""}
+          * container_spec_cpu_period{namespace="{{ .Release.Namespace }}",pod=~"myapp-.*",container!="POD",container!=""}
+        ) > 0.8
+      for: 5m
+      labels:
+        severity: warning
+        environment: prod
+      annotations:
+        summary: "High CPU use on a production pod"
+        description: "Pod {{`{{ $labels.pod }}`}} used more than 80 percent of its CPU limit for five minutes."
+        runbook_url: "https://github.com/Alexbeav/devops-phonebook-demo/blob/main/docs/runbooks/high-cpu.md"
+    - alert: MyAppProdPodRestartingFrequently
+      expr: |
+        increase(kube_pod_container_status_restarts_total{namespace="{{ .Release.Namespace }}",pod=~"myapp-.*"}[15m]) > 2
+      for: 5m
+      labels:
+        severity: warning
+        environment: prod
+      annotations:
+        summary: "A production pod restarts frequently"
+        description: "Pod {{`{{ $labels.pod }}`}} restarted more than twice in 15 minutes."
+        runbook_url: "https://github.com/Alexbeav/devops-phonebook-demo/blob/main/docs/runbooks/pod-restarts.md"
+{{- end }}

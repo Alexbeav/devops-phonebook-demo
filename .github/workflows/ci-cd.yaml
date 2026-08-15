@@ -51,6 +51,33 @@ jobs:
           ./kyverno apply policies/require-resources.yaml policies/require-probes.yaml policies/disallow-latest-tag.yaml \
             --resource /tmp/prod-render.yaml
 
+      - name: Verify production database privilege split
+        run: |
+          set -euo pipefail
+
+          runtime_user=$(yq e 'select(.kind == "Deployment" and .metadata.name == "myapp-backend") | .spec.template.spec.containers[] | select(.name == "backend") | .env[] | select(.name == "DB_USER") | .value' /tmp/prod-render.yaml)
+          runtime_secret=$(yq e 'select(.kind == "Deployment" and .metadata.name == "myapp-backend") | .spec.template.spec.containers[] | select(.name == "backend") | .env[] | select(.name == "DB_PASSWORD") | .valueFrom.secretKeyRef.name' /tmp/prod-render.yaml)
+          migration_user=$(yq e 'select(.kind == "Deployment" and .metadata.name == "myapp-backend") | .spec.template.spec.initContainers[] | select(.name == "run-migrations") | .env[] | select(.name == "DB_USER") | .value' /tmp/prod-render.yaml)
+          migration_secret=$(yq e 'select(.kind == "Deployment" and .metadata.name == "myapp-backend") | .spec.template.spec.initContainers[] | select(.name == "run-migrations") | .env[] | select(.name == "DB_PASSWORD") | .valueFrom.secretKeyRef.name' /tmp/prod-render.yaml)
+
+          test "$runtime_user" = "myappreader"
+          test "$runtime_secret" = "myapp-db-reader-credentials"
+          test "$migration_user" = "myappuser"
+          test "$migration_secret" = "myapp-db-credentials"
+
+      - name: Verify production edge isolation settings
+        run: |
+          set -euo pipefail
+
+          entrypoints=$(yq e 'select(.kind == "IngressRoute") | .spec.entryPoints[]' /tmp/prod-render.yaml | paste -sd, -)
+          middlewares=$(yq e 'select(.kind == "IngressRoute") | .spec.routes[].middlewares[].name' /tmp/prod-render.yaml | sort -u | paste -sd, -)
+
+          test "$entrypoints" = "websecure,websecure-cf"
+          echo "$middlewares" | grep -Eq '(^|,)body-limit-phonebook(,|$)'
+          echo "$middlewares" | grep -Eq '(^|,)crowdsec-bouncer-cloudflare(,|$)'
+          echo "$middlewares" | grep -Eq '(^|,)csp-phonebook(,|$)'
+          echo "$middlewares" | grep -Eq '(^|,)rate-limit-phonebook(,|$)'
+
   build-and-scan:
     runs-on: ubuntu-latest
     permissions:

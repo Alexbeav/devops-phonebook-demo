@@ -3,8 +3,9 @@
 **🌐 Live demo: [phonebook.crosstalkis.com](https://phonebook.crosstalkis.com)** — this
 exact repo, GitOps-deployed by ArgoCD to a self-hosted Kubernetes cluster, served
 through Cloudflare + Traefik (CrowdSec, rate limiting, security headers). It's an
-open demo: add and delete contacts freely — **data resets nightly, don't enter real
-information**. Image provenance is publicly verifiable:
+intentionally **read-only** public demo: production rejects contact mutations in
+the backend itself and displays known sample data. The non-public dev deployment
+retains full CRUD for pipeline and application testing. Image provenance is publicly verifiable:
 `gh attestation verify oci://ghcr.io/alexbeav/devops-phonebook-demo/backend:<tag> --owner Alexbeav`
 
 ![brave_aIIBfqkOBE](https://github.com/user-attachments/assets/789c8001-dfbd-4497-877b-3b3e5ab950e3)
@@ -21,6 +22,7 @@ This project demonstrates a modern, production-style DevOps workflow for a full-
 - **Monitoring:** Prometheus alert rules, discovered by kube-prometheus-stack
 - **Security Scanning:** Trivy (gates images before they are pushed)
 - **Rollback:** One-click GitOps rollback via GitHub Actions
+- **Public-mode safety:** Production is application-enforced read-only; dev remains writable
 
 ## 🚀 Quick Start
 
@@ -100,6 +102,8 @@ npm run dev           # Starts Vite dev server (proxies /api to :5000)
 
 - The frontend calls the backend at `/api`. In production nginx proxies it
   (config comes from the chart's ConfigMap); in dev the Vite proxy handles it.
+- Set `READ_ONLY=true` to make the backend reject all contact mutations. The
+  frontend reads `/api/config` and removes its write controls in that mode.
 
 ---
 
@@ -157,7 +161,6 @@ fresh checkout deploys without any dependency step:
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 helm install prometheus prometheus-community/kube-prometheus-stack \
   --version 88.3.0 --namespace monitoring --create-namespace
-kubectl apply -f manifests/prometheus-alerts.yaml
 ```
 
 The release name `prometheus` and namespace `monitoring` matter: the chart's
@@ -167,31 +170,23 @@ NetworkPolicy only admits scrapes from Prometheus pods in `monitoring`.
 ---
 
 
-## 🔐 Managing Database Credentials with SealedSecrets
+## 🔐 Managing Database Credentials
 
-The production Helm values (`values-prod.yaml`) reference a Kubernetes Secret via `existingSecret: myapp-db-credentials` instead of storing passwords in Git. [Bitnami SealedSecrets](https://github.com/bitnami-labs/sealed-secrets) lets you encrypt secrets with your cluster's public key so the encrypted form is safe to commit. The SealedSecrets controller in your cluster decrypts them automatically.
+Production uses two Kubernetes Secrets. `myapp-db-credentials` contains the
+database owner and writer credentials. `myapp-db-reader-credentials` contains
+the SELECT-only credential used by the public backend.
 
-> **Dev environment:** `values-dev.yaml` keeps an inline password for convenience — the Bitnami PostgreSQL subchart auto-creates the Secret. For production, always use SealedSecrets.
+Do not store either plaintext secret in Git. Use your cluster's secret manager,
+such as Vault Secrets Operator, External Secrets Operator, or SealedSecrets.
+The live homelab currently bootstraps these two Secrets out of band.
 
-### 1. Install the SealedSecrets controller
+> **Dev environment:** `values-dev.yaml` keeps an inline password for convenience.
+> The Bitnami PostgreSQL subchart creates the development Secret.
 
-```bash
-helm repo add sealed-secrets https://bitnami-labs.github.io/sealed-secrets
-helm install sealed-secrets sealed-secrets/sealed-secrets \
-  --namespace sealed-secrets --create-namespace
-```
+### Required production keys
 
-### 2. Install the kubeseal CLI
-
-```bash
-curl -OL "https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.30.0/kubeseal-0.30.0-linux-amd64.tar.gz"
-tar -xvzf kubeseal-0.30.0-linux-amd64.tar.gz kubeseal
-sudo install -m 755 kubeseal /usr/local/bin/kubeseal
-```
-
-### 3. Create a plaintext Secret manifest (local only — never commit this)
-
-The Bitnami PostgreSQL chart expects keys `postgres-password` (superuser) and `password` (application user). The backend deployment also reads `password` from this same Secret.
+The Bitnami PostgreSQL chart requires `postgres-password` and `password` in
+`myapp-db-credentials`. Migration and reset jobs use its `password` key.
 
 Create a file called `tmp-prod-secret.yaml` (do **not** commit it):
 
@@ -207,54 +202,32 @@ stringData:
   password: "<your-app-user-password>"
 ```
 
-### 4. Seal the Secret
+The public backend Secret requires `username` and `password`:
 
-```bash
-kubeseal \
-  --controller-name=sealed-secrets \
-  --controller-namespace=sealed-secrets \
-  --format yaml \
-  < tmp-prod-secret.yaml \
-  > manifests/sealedsecret-db-prod.yaml
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: myapp-db-reader-credentials
+  namespace: myapp-prod
+type: Opaque
+stringData:
+  username: myappreader
+  password: "<reader-password>"
 ```
 
-Delete the plaintext file immediately:
-```bash
-rm tmp-prod-secret.yaml
-```
+Provision `myappreader` in PostgreSQL with only `CONNECT`, schema `USAGE`, and
+`SELECT` on `public.contacts`. Set `default_transaction_read_only=on` as a
+second control. Remove `CREATEDB`, `CREATEROLE`, superuser, replication, and
+inherit privileges from this role.
 
-Repeat for dev if desired (change `namespace` to `myapp-dev`).
-
-### 5. Commit the encrypted SealedSecret to Git
-
-The sealed file is safe to commit — it can only be decrypted by your cluster's controller.
+### Verify
 
 ```bash
-git add manifests/sealedsecret-db-prod.yaml
-git commit -m "Add sealed database credentials for production"
-git push
-```
-
-### 6. Apply to the cluster (bootstrap)
-
-Before the first ArgoCD sync, create the namespaces and apply the sealed secrets:
-
-```bash
-kubectl create namespace myapp-prod --dry-run=client -o yaml | kubectl apply -f -
-kubectl apply -f manifests/sealedsecret-db-prod.yaml
-```
-
-The SealedSecrets controller will decrypt it into a regular Secret named `myapp-db-credentials` in the `myapp-prod` namespace. ArgoCD will then be able to deploy the Helm chart, which references this Secret.
-
-### 7. Verify
-
-```bash
-# Check the SealedSecret was processed
-kubectl get sealedsecret myapp-db-credentials -n myapp-prod
-
-# Check the decrypted Secret exists with the expected keys
-kubectl get secret myapp-db-credentials -n myapp-prod -o jsonpath='{.data}' | python3 -c "import sys,json; print(list(json.load(sys.stdin).keys()))"
-# Should output: ['password', 'postgres-password']
+kubectl get secret myapp-db-credentials myapp-db-reader-credentials -n myapp-prod
+kubectl -n myapp-prod get deployment myapp-backend \
+  -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="DB_USER")].value}'
+# Expected: myappreader
 ```
 
 ---
@@ -263,7 +236,14 @@ kubectl get secret myapp-db-credentials -n myapp-prod -o jsonpath='{.data}' | py
 - Monitoring runs on kube-prometheus-stack (see Cluster Prerequisites); the chart ships a backend ServiceMonitor, a postgres exporter (prod), and per-environment `PrometheusRule` alerts.
 - TLS via cert-manager on the standard Ingress (default) or via a `Certificate` on the optional Traefik IngressRoute.
 - PostgreSQL is reachable only from backend pods (and the Prometheus scraper on the exporter port) via NetworkPolicy.
-- The backend container runs as a non-root user; the frontend keeps the stock nginx image (root master process) as an accepted demo tradeoff.
+- Both application containers run as non-root users with read-only root filesystems,
+  all Linux capabilities dropped, and privilege escalation disabled.
+- The public production API permits contact reads only. `POST`, `PUT`, `PATCH`,
+  and `DELETE` receive `405 Method Not Allowed` from the backend. Development
+  remains writable through `backend.readOnly: false`.
+- Contact routes also have an application-layer request ceiling. Cloudflare and
+  Traefik provide the per-client edge limits; the backend limit is a final
+  aggregate safety ceiling and does not trust forwarded client-IP headers.
 
 ---
 
@@ -279,9 +259,9 @@ CREATE TABLE contacts (
 
 ## 🚨 Alert Rules
 
-Prometheus alert rules ship per environment in `manifests/prometheus-alerts.yaml`.
-Every expression is namespace-scoped and pairs its comparison with an `absent()`
-branch, so a deleted deployment or never-scraped target still fires.
+The production Helm chart installs its `PrometheusRule` when `monitoring.enabled=true`.
+The standalone `manifests/prometheus-alerts.yaml` file remains available for manual deployments.
+Each expression is namespace-scoped. An `absent()` branch detects a missing target or metric.
 
 ### Prod (critical)
 - **BackendDown / FrontendDown**: no available replicas for >1 minute (kube-state-metrics)

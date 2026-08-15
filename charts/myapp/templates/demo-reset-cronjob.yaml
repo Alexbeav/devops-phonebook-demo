@@ -1,6 +1,5 @@
 {{- if .Values.demoReset.enabled }}
-# Public demo hygiene: wipes user-submitted contacts on a schedule so the
-# exposed instance stays fresh and junk never accumulates.
+# Public demo hygiene: restores known sample data on a schedule.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -42,8 +41,15 @@ spec:
                     - ALL
               command:
                 - psql
+                - -v
+                - ON_ERROR_STOP=1
                 - -c
-                - TRUNCATE contacts RESTART IDENTITY
+                - |
+                  TRUNCATE contacts RESTART IDENTITY;
+                  INSERT INTO contacts (name, phone, email) VALUES
+                    ('Ada Lovelace', '+1 555-0101', 'ada@example.com'),
+                    ('Grace Hopper', '+1 555-0102', 'grace@example.com'),
+                    ('Margaret Hamilton', '+1 555-0103', 'margaret@example.com');
               env:
                 - name: PGHOST
                   value: {{ .Values.postgresql.fullnameOverride | quote }}

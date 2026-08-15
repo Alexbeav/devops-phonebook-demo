@@ -16,6 +16,8 @@ ingress:
   # Ingress support); TLS comes from the cert-manager Certificate the chart
   # creates (letsencrypt-prod, DNS-01).
   useIngressRoute: true
+  entryPoints:
+    - websecure
   tls:
     enabled: true
   middlewares:
@@ -31,6 +33,7 @@ monitoring:
 backend:
   image: ghcr.io/alexbeav/devops-phonebook-demo/backend
   tag: "98a8457"
+  readOnly: false
   replicaCount: 1
   service:
     type: ClusterIP
