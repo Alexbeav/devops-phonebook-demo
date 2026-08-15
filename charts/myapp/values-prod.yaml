@@ -53,7 +53,7 @@ backend:
       memory: 256Mi
 frontend:
   image: ghcr.io/alexbeav/devops-phonebook-demo/frontend
-  tag: "8731336"
+  tag: "51fd65d"
   replicaCount: 3
   service:
     type: ClusterIP # Traefik fronts the app; no direct LoadBalancer exposure
