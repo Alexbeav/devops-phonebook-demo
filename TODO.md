@@ -19,10 +19,10 @@
 - [x] CodeQL (main/dev/PR/weekly), checksum-verified gitleaks full-history scan, Dependabot (npm/actions/docker/helm)
 - [x] npm audit gate on production dependencies
 - [x] Dependabot vulnerability alerts + automated security fixes enabled at repo level
+- [x] Homelab Kyverno verifies GitHub attestations at Pod admission, binds tags to verified digests, and denies unsigned images (`homelab-k8s` `a8fb4a5`)
 
 ## Future Improvements
 - [ ] Main-branch ruleset: require `policy-gate` + `build-and-scan` status checks (upgrades the policy gate from blocking CI validation to true pre-merge enforcement; makes main PR-only)
-- [ ] Homelab wiring: Kyverno `verifyImages` at admission against these GitHub attestations — end-to-end supply chain (build provenance → admission verification)
 - [ ] Live rollback drill: execute the rollback workflow against a real environment, verify, and record the result (upgrades the README evidence row from capability to tested)
 - [ ] Release-tagged durable evidence bundles (SBOM + scan report + attestation bundle attached to GitHub Releases — outlives the 90-day artifact retention)
 - [ ] Live-PostgreSQL smoke test in CI (service container) alongside the mocked suite

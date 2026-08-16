@@ -21,6 +21,7 @@ This project demonstrates a modern, production-style DevOps workflow for a full-
 - **Ingress:** Traefik with TLS via cert-manager
 - **Monitoring:** Prometheus alert rules, discovered by kube-prometheus-stack
 - **Security Scanning:** Trivy (gates images before they are pushed)
+- **Admission Security:** Kyverno verifies GitHub SLSA provenance, resolves tags to immutable digests, and denies unsigned images
 - **Rollback:** One-click GitOps rollback via GitHub Actions
 - **Public-mode safety:** Production is application-enforced read-only; dev remains writable
 
@@ -310,6 +311,7 @@ evidence for* obligations; they do not make anything "compliant" by themselves.
 | Vulnerability scan gates image publication | CI: Trivy runs between build and push; CRITICAL/HIGH fails the job | Workflow run logs | CRA Annex I vulnerability handling |
 | Per-build SBOM (CycloneDX) | CI: generated for every build, PR and push | Workflow artifact, 90 days; SBOM attestation on the image (hosted by GitHub, owner-deletable) | CRA Annex I Part II (machine-readable SBOM) |
 | Signed SLSA build provenance | CI: `actions/attest` on every pushed image, OCI-discoverable | GitHub attestations — verify with `gh attestation verify oci://ghcr.io/alexbeav/devops-phonebook-demo/backend:<tag> --owner Alexbeav` | NIS2 Art. 21 supply-chain security |
+| Digest-bound deployment admission | Homelab Kyverno verifies each Phonebook Pod against the GitHub workflow identity, requires the attested digest, rewrites tags to `tag@sha256:…`, and denies unsigned images | GitOps policy history plus positive signed-image and negative unsigned-image admission tests | NIS2 Art. 21 supply-chain security / change control |
 | Policy-as-code gate (incl. negative self-tests) | CI: `policy-gate` job — Kyverno validates both env renders; fixtures prove the policies block violations | Job logs + `policies/` in git history | NIS2 Art. 21 change control |
 | Prod changes via pull request | CI writes prod image tags only through the `ci/tag-update` PR | PR history on `main` | NIS2 Art. 21 change control |
 | Secret scanning (full history) | CI: pinned, checksum-verified gitleaks with known-positive self-test; findings suppressed only by audited fingerprint | Workflow run logs + `.gitleaksignore` justifications | NIS2 Art. 21 access control / hygiene |
