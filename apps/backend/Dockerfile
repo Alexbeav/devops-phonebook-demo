@@ -1,10 +1,10 @@
 # Backend Dockerfile (Node.js/Express)
-FROM node:20-alpine AS deps
+FROM node:25-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
-FROM node:20-alpine
+FROM node:25-alpine
 # apk upgrade picks up OS security patches (e.g. openssl) ahead of the base
 # image tag; the bundled npm CLI is removed because the runtime never uses it
 # (migrations run 'node migrate.js') and its vendored deps trip image scans.
