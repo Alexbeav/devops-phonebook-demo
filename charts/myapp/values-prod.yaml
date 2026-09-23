@@ -5,10 +5,9 @@ ingress:
   # Ingress support); TLS comes from the cert-manager Certificate the chart
   # creates (letsencrypt-prod, DNS-01).
   useIngressRoute: true
-  # Keep the current path during the staged migration. Cloudflare Tunnel will
-  # move to websecure-cf only after this route is healthy on both entrypoints.
+  # Cloudflare Tunnel route. websecure-cf is reachable only from cloudflared,
+  # so CF-Connecting-IP (set by Cloudflare's edge) identifies the client.
   entryPoints:
-    - websecure
     - websecure-cf
   tls:
     enabled: true
@@ -23,6 +22,23 @@ ingress:
       namespace: traefik
     - name: security-headers
       namespace: traefik
+  # LAN route. The LAN resolver sends every crosstalkis.com name to Traefik's
+  # VIP, and LAN requests carry no CF-Connecting-IP, so this route limits by
+  # client address instead of by the Cloudflare header.
+  lan:
+    entryPoints:
+      - websecure
+    middlewares:
+      - name: crowdsec-bouncer
+        namespace: traefik
+      - name: rate-limit-phonebook-lan
+        namespace: traefik
+      - name: body-limit-phonebook
+        namespace: traefik
+      - name: csp-phonebook
+        namespace: traefik
+      - name: security-headers
+        namespace: traefik
 # Public demo instance: application-enforced read-only mode plus a nightly
 # reset to known harmless sample data (04:00 cluster time).
 demoReset:

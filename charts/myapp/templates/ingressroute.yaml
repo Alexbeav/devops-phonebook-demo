@@ -8,41 +8,30 @@ spec:
     {{- range .Values.ingress.entryPoints }}
     - {{ . }}
     {{- end }}
-  routes:
-    # Backend keeps its /api prefix - no stripPrefix middleware. The Express
-    # routes are registered as /api/..., so stripping the prefix would 404.
-    - match: Host(`{{ .Values.ingress.host }}`) && PathPrefix(`/api`)
-      kind: Rule
-      {{- with .Values.ingress.middlewares }}
-      middlewares:
-        {{- range . }}
-        - name: {{ .name }}
-          {{- with .namespace }}
-          namespace: {{ . }}
-          {{- end }}
-        {{- end }}
-      {{- end }}
-      services:
-        - name: myapp-backend
-          port: 5000
-    - match: Host(`{{ .Values.ingress.host }}`)
-      kind: Rule
-      {{- with .Values.ingress.middlewares }}
-      middlewares:
-        {{- range . }}
-        - name: {{ .name }}
-          {{- with .namespace }}
-          namespace: {{ . }}
-          {{- end }}
-        {{- end }}
-      {{- end }}
-      services:
-        - name: myapp-frontend
-          port: 80
+  {{- include "myapp.ingressRouteRoutes" (dict "host" .Values.ingress.host "middlewares" .Values.ingress.middlewares) | nindent 2 }}
   {{- if .Values.ingress.tls.enabled }}
   tls:
     secretName: myapp-tls
   {{- end }}
+{{- with .Values.ingress.lan }}
+---
+# Optional second route for entrypoints that need a different middleware
+# chain, for example a LAN entrypoint beside a tunnel-only one.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ include "myapp.fullname" $ }}-ingressroute-lan
+spec:
+  entryPoints:
+    {{- range .entryPoints }}
+    - {{ . }}
+    {{- end }}
+  {{- include "myapp.ingressRouteRoutes" (dict "host" $.Values.ingress.host "middlewares" .middlewares) | nindent 2 }}
+  {{- if $.Values.ingress.tls.enabled }}
+  tls:
+    secretName: myapp-tls
+  {{- end }}
+{{- end }}
 {{- if .Values.ingress.tls.enabled }}
 ---
 # cert-manager provisions the myapp-tls secret referenced above; Traefik's

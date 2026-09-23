@@ -19,6 +19,11 @@ ingress:
   # Optional Traefik middlewares applied to both routes (IngressRoute mode),
   # e.g. rate limiting / WAF chains that already exist in the cluster.
   middlewares: []
+  # Optional second IngressRoute with its own entryPoints and middlewares,
+  # e.g. a LAN entrypoint beside a tunnel-only one. See values-prod.yaml.
+  # lan:
+  #   entryPoints: [websecure]
+  #   middlewares: []
   # Namespace where Traefik runs (ingress NetworkPolicy peer)
   traefikNamespace: traefik
 
