@@ -69,14 +69,35 @@ jobs:
         run: |
           set -euo pipefail
 
-          entrypoints=$(yq e 'select(.kind == "IngressRoute") | .spec.entryPoints[]' /tmp/prod-render.yaml | paste -sd, -)
-          middlewares=$(yq e 'select(.kind == "IngressRoute") | .spec.routes[].middlewares[].name' /tmp/prod-render.yaml | sort -u | paste -sd, -)
+          tunnel='select(.kind == "IngressRoute" and .metadata.name == "myapp-prod-ingressroute")'
+          lan='select(.kind == "IngressRoute" and .metadata.name == "myapp-prod-ingressroute-lan")'
 
-          test "$entrypoints" = "websecure,websecure-cf"
-          echo "$middlewares" | grep -Eq '(^|,)body-limit-phonebook(,|$)'
-          echo "$middlewares" | grep -Eq '(^|,)crowdsec-bouncer-cloudflare(,|$)'
-          echo "$middlewares" | grep -Eq '(^|,)csp-phonebook(,|$)'
-          echo "$middlewares" | grep -Eq '(^|,)rate-limit-phonebook(,|$)'
+          routes=$(yq e 'select(.kind == "IngressRoute") | .metadata.name' /tmp/prod-render.yaml | paste -sd, -)
+          tunnel_entrypoints=$(yq e "$tunnel | .spec.entryPoints[]" /tmp/prod-render.yaml | paste -sd, -)
+          tunnel_middlewares=$(yq e "$tunnel | .spec.routes[].middlewares[].name" /tmp/prod-render.yaml | sort -u | paste -sd, -)
+          lan_entrypoints=$(yq e "$lan | .spec.entryPoints[]" /tmp/prod-render.yaml | paste -sd, -)
+          lan_middlewares=$(yq e "$lan | .spec.routes[].middlewares[].name" /tmp/prod-render.yaml | sort -u | paste -sd, -)
+
+          test "$routes" = "myapp-prod-ingressroute,myapp-prod-ingressroute-lan"
+
+          # Cloudflare Tunnel route: websecure-cf only. Only cloudflared can
+          # reach it, and Cloudflare's edge sets CF-Connecting-IP.
+          test "$tunnel_entrypoints" = "websecure-cf"
+          for mw in body-limit-phonebook crowdsec-bouncer-cloudflare csp-phonebook rate-limit-phonebook; do
+            echo "$tunnel_middlewares" | grep -Eq "(^|,)$mw(,|\$)"
+          done
+
+          # LAN route: websecure only, rate-limited by client address. LAN
+          # requests carry no CF-Connecting-IP, so the Cloudflare-keyed limiter
+          # must never serve websecure.
+          test "$lan_entrypoints" = "websecure"
+          for mw in body-limit-phonebook crowdsec-bouncer csp-phonebook rate-limit-phonebook-lan; do
+            echo "$lan_middlewares" | grep -Eq "(^|,)$mw(,|\$)"
+          done
+          if echo "$lan_middlewares" | grep -Eq '(^|,)rate-limit-phonebook(,|$)'; then
+            echo "rate-limit-phonebook (CF-Connecting-IP) must not serve websecure" >&2
+            exit 1
+          fi
 
   build-and-scan:
     runs-on: ubuntu-latest
