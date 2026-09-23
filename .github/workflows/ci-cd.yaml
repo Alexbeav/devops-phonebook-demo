@@ -72,11 +72,16 @@ jobs:
           tunnel='select(.kind == "IngressRoute" and .metadata.name == "myapp-prod-ingressroute")'
           lan='select(.kind == "IngressRoute" and .metadata.name == "myapp-prod-ingressroute-lan")'
 
-          routes=$(yq e 'select(.kind == "IngressRoute") | .metadata.name' /tmp/prod-render.yaml | paste -sd, -)
-          tunnel_entrypoints=$(yq e "$tunnel | .spec.entryPoints[]" /tmp/prod-render.yaml | paste -sd, -)
-          tunnel_middlewares=$(yq e "$tunnel | .spec.routes[].middlewares[].name" /tmp/prod-render.yaml | sort -u | paste -sd, -)
-          lan_entrypoints=$(yq e "$lan | .spec.entryPoints[]" /tmp/prod-render.yaml | paste -sd, -)
-          lan_middlewares=$(yq e "$lan | .spec.routes[].middlewares[].name" /tmp/prod-render.yaml | sort -u | paste -sd, -)
+          routes=$(yq e -N 'select(.kind == "IngressRoute") | .metadata.name' /tmp/prod-render.yaml | paste -sd, -)
+          tunnel_entrypoints=$(yq e -N "$tunnel | .spec.entryPoints[]" /tmp/prod-render.yaml | paste -sd, -)
+          tunnel_middlewares=$(yq e -N "$tunnel | .spec.routes[].middlewares[].name" /tmp/prod-render.yaml | sort -u | paste -sd, -)
+          lan_entrypoints=$(yq e -N "$lan | .spec.entryPoints[]" /tmp/prod-render.yaml | paste -sd, -)
+          lan_middlewares=$(yq e -N "$lan | .spec.routes[].middlewares[].name" /tmp/prod-render.yaml | sort -u | paste -sd, -)
+          # -N: without it yq prints '---' between results from different
+          # documents, which breaks the route-name comparison below.
+          echo "routes=$routes"
+          echo "tunnel=$tunnel_entrypoints [$tunnel_middlewares]"
+          echo "lan=$lan_entrypoints [$lan_middlewares]"
 
           test "$routes" = "myapp-prod-ingressroute,myapp-prod-ingressroute-lan"
 
