@@ -49,7 +49,7 @@ monitoring:
   release: prometheus
 backend:
   image: ghcr.io/alexbeav/devops-phonebook-demo/backend
-  tag: "f758536"
+  tag: "3b50325"
   readOnly: true
   # The public backend receives SELECT-only database credentials. Migrations
   # and the reset job continue to use the separate myappuser writer account.
@@ -69,7 +69,7 @@ backend:
       memory: 256Mi
 frontend:
   image: ghcr.io/alexbeav/devops-phonebook-demo/frontend
-  tag: "51fd65d"
+  tag: "3b50325"
   replicaCount: 3
   service:
     type: ClusterIP # Traefik fronts the app; no direct LoadBalancer exposure
