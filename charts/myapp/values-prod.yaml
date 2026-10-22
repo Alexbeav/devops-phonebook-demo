@@ -49,7 +49,7 @@ monitoring:
   release: prometheus
 backend:
   image: ghcr.io/alexbeav/devops-phonebook-demo/backend
-  tag: "3b50325"
+  tag: "44cc0d9"
   readOnly: true
   # The public backend receives SELECT-only database credentials. Migrations
   # and the reset job continue to use the separate myappuser writer account.
