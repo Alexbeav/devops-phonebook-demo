@@ -199,7 +199,7 @@ jobs:
 
       - name: Upload backend SBOM artifact
         if: steps.changes.outputs.backend == 'true'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: backend-sbom-${{ steps.meta.outputs.sha }}
           path: backend-sbom.cdx.json
@@ -207,7 +207,7 @@ jobs:
 
       - name: Upload frontend SBOM artifact
         if: steps.changes.outputs.frontend == 'true'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: frontend-sbom-${{ steps.meta.outputs.sha }}
           path: frontend-sbom.cdx.json
