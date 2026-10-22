@@ -316,13 +316,13 @@ evidence for* obligations; they do not make anything "compliant" by themselves.
 | Prod changes via pull request | CI writes prod image tags only through the `ci/tag-update` PR | PR history on `main` | NIS2 Art. 21 change control |
 | Secret scanning (full history) | CI: pinned, checksum-verified gitleaks with known-positive self-test; findings suppressed only by audited fingerprint | Workflow run logs + `.gitleaksignore` justifications | NIS2 Art. 21 access control / hygiene |
 | SAST | CI: CodeQL on main, dev, PRs, weekly | Repository Security tab | CRA secure-development practices |
-| Dependency monitoring | Dependabot: version-update PRs (npm/actions/docker/helm) — *plus* repository-level vulnerability alerts and security updates, which are separate settings (both enabled) | Dependabot PRs and alerts | CRA Annex I vulnerability handling |
+| Dependency monitoring | Renovate: version-update PRs (npm/actions/docker/helm) with a Dependency Dashboard issue — *plus* Dependabot vulnerability alerts and security updates (both enabled) | Renovate PRs, Dependabot alerts and security PRs | CRA Annex I vulnerability handling |
 | Production-dependency audit gate | CI: `npm audit --omit=dev --audit-level=high` per app | Workflow run logs | CRA Annex I vulnerability handling |
 | Supply-chain pinning | All third-party actions pinned to commit SHAs; CLI downloads checksum-verified; subchart vendored + locked | Git history / workflow files | NIS2 Art. 21 supply-chain security |
 | Rollback capability | `workflow_dispatch` with SHA-validated inputs, GHCR tag verification, branch-mapped GitOps commit | Workflow definition + run history. **Capability, not yet exercised** — a live rollback drill is in TODO | NIS2 Art. 21 incident handling / recovery |
 | Incident runbooks | `docs/runbooks/` linked from every alert | Git history | NIS2 Art. 21 incident handling |
 
-Dependabot PRs are deliberately **not** build-blocking: the Trivy gate blocks
+Dependency-update PRs are deliberately **not** build-blocking: the Trivy gate blocks
 vulnerable runtime images, and the npm audit gate blocks vulnerable production
 dependencies — build-time/dev-chain advisories arrive as PRs and alerts
 instead of holding the pipeline red.

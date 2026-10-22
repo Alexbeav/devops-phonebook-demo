@@ -1,35 +1,44 @@
-# Version-update PRs are deliberately not build-blocking (see README rationale)
-# - vulnerability alerts and security updates are separate repository settings.
+# Version updates come from Renovate (renovate.json). Each entry here sets
+# open-pull-requests-limit: 0, which turns off Dependabot version-update PRs
+# but keeps its security-update PRs (a separate repository setting) for these
+# directories.
 version: 2
 updates:
   - package-ecosystem: npm
     directory: /apps/backend
     schedule:
       interval: weekly
+    open-pull-requests-limit: 0
   - package-ecosystem: npm
     directory: /apps/frontend
     schedule:
       interval: weekly
+    open-pull-requests-limit: 0
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    open-pull-requests-limit: 0
   - package-ecosystem: docker
     directory: /apps/backend
     schedule:
       interval: weekly
+    open-pull-requests-limit: 0
   - package-ecosystem: docker
     directory: /apps/frontend
     schedule:
       interval: weekly
+    open-pull-requests-limit: 0
   # Covers image references in the chart manifests (e.g. the postgres:16
   # initContainer pin in backend-deployment.yaml).
   - package-ecosystem: docker
     directory: /charts/myapp
     schedule:
       interval: weekly
+    open-pull-requests-limit: 0
   # Chart.yaml / Chart.lock dependency maintenance (Bitnami PostgreSQL).
   - package-ecosystem: helm
     directory: /charts/myapp
     schedule:
       interval: weekly
+    open-pull-requests-limit: 0
